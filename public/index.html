@@ -143,6 +143,14 @@
     </div>
   </header>
 
+  <!-- تنبيه تلقائي إذا فتح المضيف رابط معاينة خاص يطلب تسجيل دخول Vercel بدلاً من الرابط العام -->
+  <div id="publicDomainBanner" class="domain-warning-bar hidden">
+    <div class="domain-warning-text">
+      ⚠️ <strong>تنبيه هام لمشاركة الرابط:</strong> أنت تفتح الآن رابط معاينة خاص بحسابك (قد يطلب تسجيل دخول Vercel من أصدقائك). العب وشارك من الرابط العام المفتوح للجميع:
+    </div>
+    <a id="publicDomainLink" href="/" class="btn btn-gold btn-sm">الانتقال للرابط العام ↗</a>
+  </div>
+
   <!-- 1) شاشة البداية وإنشاء / دخول الغرف -->
   <main id="landingScreen" class="screen active">
     <div class="landing-container">
@@ -546,8 +554,12 @@
   <!-- حاوية الإشعارات الفورية -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <!-- تحميل Socket.io (عند تشغيل خادم Node.js) ثم ملفات اللعبة -->
+  <!-- تحميل Socket.io (عند تشغيل خادم Node.js) + PeerJS (للغرف السحابية المباشرة على Vercel) -->
   <script src="/socket.io/socket.io.js" onerror="window.__NO_SOCKET_IO__=true"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"
+    onerror="var s=document.createElement('script');s.src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';document.head.appendChild(s);"
+  ></script>
   <script src="js/shared/gameData.js"></script>
   <script src="js/shared/gameEngine.js"></script>
   <script src="js/audio.js"></script>

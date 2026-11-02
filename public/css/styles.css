@@ -1772,3 +1772,28 @@ button, input, select {
   }
 }
 
+/* شريط تنبيه رابط المعاينة على Vercel */
+.domain-warning-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 18px;
+  background: linear-gradient(90deg, rgba(180, 83, 9, 0.92), rgba(146, 64, 14, 0.95));
+  border-bottom: 1px solid rgba(251, 191, 36, 0.55);
+  color: #fffbeb;
+  font-size: 0.85rem;
+  text-align: center;
+  z-index: 190;
+}
+
+.domain-warning-bar.hidden {
+  display: none !important;
+}
+
+.domain-warning-text strong {
+  color: #fde68a;
+}
+
+

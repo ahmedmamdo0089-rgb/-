@@ -43,6 +43,7 @@
     const ids = [
       'connectionBadge', 'connectionText', 'headerRoomBar', 'headerRoomCode',
       'headerCopyInviteBtn', 'leaveRoomBtn', 'soundToggleBtn',
+      'publicDomainBanner', 'publicDomainLink',
       'landingScreen', 'lobbyScreen', 'gameScreen',
       'inviteBanner', 'inviteBannerTitle', 'inviteBannerSub',
       'playerNameInput', 'avatarPickerGrid', 'createRoomBtn', 'joinRoomCodeInput', 'joinRoomBtn',
@@ -1204,12 +1205,15 @@
         return;
       }
       AudioFX.click();
+      const origCreateText = els.createRoomBtn.textContent;
       els.createRoomBtn.disabled = true;
+      els.createRoomBtn.textContent = '⏳ جاري إنشاء الغرفة...';
       Network.createRoom({
         playerName: name,
         avatarId: ui.selectedAvatarId
       }).then(function (res) {
         els.createRoomBtn.disabled = false;
+        els.createRoomBtn.textContent = origCreateText;
         if (!res || !res.ok) {
           showToast((res && res.error) || 'تعذر إنشاء الغرفة.', 'error');
           return;
@@ -1238,7 +1242,9 @@
         return;
       }
       AudioFX.click();
+      const origJoinText = els.joinRoomBtn.textContent;
       els.joinRoomBtn.disabled = true;
+      els.joinRoomBtn.textContent = '⏳ اتصال...';
       const saved = loadSession(code);
       Network.joinRoom({
         roomCode: code,
@@ -1247,6 +1253,7 @@
         sessionToken: saved ? saved.sessionToken : null
       }).then(function (res) {
         els.joinRoomBtn.disabled = false;
+        els.joinRoomBtn.textContent = origJoinText;
         if (!res || !res.ok) {
           showToast((res && res.error) || 'تعذر الانضمام للغرفة.', 'error');
           return;
@@ -1535,8 +1542,9 @@
     bindEvents();
 
     Network.onConnectionChange(function (info) {
+      const isOnlineMode = info.mode === 'socket' || info.mode === 'cloud_api' || info.mode === 'p2p';
       els.connectionBadge.className = 'conn-badge ' + (
-        info.mode === 'socket'
+        isOnlineMode
           ? (info.connected ? 'online' : 'offline')
           : 'local'
       );
@@ -1544,8 +1552,27 @@
         els.connectionText.textContent = info.connected
           ? 'متصل أونلاين (Socket.io)'
           : 'انقطع الاتصال... جاري المحاولة';
+      } else if (info.mode === 'cloud_api') {
+        els.connectionText.textContent = info.connected
+          ? 'متصل أونلاين (خادم سحابي)'
+          : 'جاري إعادة الاتصال بالخادم...';
+      } else if (info.mode === 'p2p') {
+        els.connectionText.textContent = info.connected
+          ? 'متصل أونلاين (سحابي مباشر)'
+          : 'جاري إعادة الاتصال...';
       } else {
         els.connectionText.textContent = 'وضع المتصفح المحلي';
+      }
+
+      if (els.publicDomainBanner && els.publicDomainLink) {
+        const curHost = String(window.location.hostname || '').toLowerCase();
+        const prodHost = String(info.publicHost || '').toLowerCase();
+        if (prodHost && curHost && curHost !== prodHost && curHost !== 'localhost' && curHost !== '127.0.0.1') {
+          els.publicDomainLink.href = 'https://' + prodHost + (window.location.search || '');
+          els.publicDomainBanner.classList.remove('hidden');
+        } else {
+          els.publicDomainBanner.classList.add('hidden');
+        }
       }
     });
 
