@@ -1,6 +1,12 @@
 {
   "version": 2,
+  "regions": ["fra1"],
   "cleanUrls": true,
+  "functions": {
+    "api/room.js": {
+      "includeFiles": "public/js/shared/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/room/:code",
@@ -8,4 +14,3 @@
     }
   ]
 }
-
