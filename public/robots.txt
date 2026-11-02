@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Sitemap يُولّد تلقائياً حسب رابط الاستضافة
+Sitemap: /sitemap.xml
+

@@ -1,0 +1,29 @@
+{
+  "name": "bank-el-haz-egypt",
+  "version": "1.0.0",
+  "description": "لعبة بنك الحظ المصري التفاعلية الجماعية أونلاين (Egyptian Monopoly Multiplayer Web Game)",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "keywords": [
+    "monopoly",
+    "bank-el-haz",
+    "egypt",
+    "multiplayer",
+    "socket.io",
+    "arabic-game",
+    "بنك-الحظ"
+  ],
+  "author": "Bank El Haz Egypt",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
+

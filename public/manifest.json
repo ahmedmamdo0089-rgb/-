@@ -1,0 +1,29 @@
+{
+  "name": "بنك الحظ المصري أونلاين | إمبراطور المحافظات",
+  "short_name": "بنك الحظ المصري",
+  "description": "العب بنك الحظ المصري (مونوبولي العرب) أونلاين مجاناً مع أصدقائك عبر رابط دعوة مباشر من 2 إلى 6 لاعبين.",
+  "lang": "ar-EG",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080f23",
+  "theme_color": "#0b132b",
+  "categories": ["games", "board", "entertainment"],
+  "icons": [
+    {
+      "src": "assets/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
