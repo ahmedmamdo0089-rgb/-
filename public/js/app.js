@@ -1542,7 +1542,7 @@
     bindEvents();
 
     Network.onConnectionChange(function (info) {
-      const isOnlineMode = info.mode === 'socket' || info.mode === 'cloud_api' || info.mode === 'p2p';
+      const isOnlineMode = info.mode === 'socket' || info.mode === 'mqtt_cloud' || info.mode === 'cloud_api';
       els.connectionBadge.className = 'conn-badge ' + (
         isOnlineMode
           ? (info.connected ? 'online' : 'offline')
@@ -1550,18 +1550,18 @@
       );
       if (info.mode === 'socket') {
         els.connectionText.textContent = info.connected
-          ? 'متصل أونلاين (Socket.io)'
-          : 'انقطع الاتصال... جاري المحاولة';
+          ? 'أونلاين (Socket.io)'
+          : 'انقطع الاتصال...';
+      } else if (info.mode === 'mqtt_cloud') {
+        els.connectionText.textContent = info.connected
+          ? 'أونلاين عالمي v3.1'
+          : 'إعادة الاتصال...';
       } else if (info.mode === 'cloud_api') {
         els.connectionText.textContent = info.connected
-          ? 'متصل أونلاين (خادم سحابي)'
-          : 'جاري إعادة الاتصال بالخادم...';
-      } else if (info.mode === 'p2p') {
-        els.connectionText.textContent = info.connected
-          ? 'متصل أونلاين (سحابي مباشر)'
-          : 'جاري إعادة الاتصال...';
+          ? 'أونلاين سحابي v3.1'
+          : 'إعادة الاتصال...';
       } else {
-        els.connectionText.textContent = 'وضع المتصفح المحلي';
+        els.connectionText.textContent = 'وضع محلي (بدون إنترنت)';
       }
 
       if (els.publicDomainBanner && els.publicDomainLink) {
