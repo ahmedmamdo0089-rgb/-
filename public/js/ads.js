@@ -1,0 +1,198 @@
+(function (root) {
+  'use strict';
+
+  /**
+   * ============================================================================
+   * 💰 نظام إدارة الإعلانات والأرباح المفعّل — بنك الحظ المصري (Ads Manager v4.1)
+   * ============================================================================
+   * تم ربط وتفعيل الوحدات الإعلانية الخاصة بك بنجاح:
+   *  1) بانر عريض للكمبيوتر والتابلت (728×90): 71b51a1973d418aab7666f5c38587bc9
+   *  2) بانر مستطيل للموبايل والقائمة الجانبية والفوز (300×250): b6ea58cccfaf6daac0213b20606aefb4
+   *  3) الرابط المباشر الذكي (Direct Smartlink):
+   *     https://www.profitableratecpmnetwork.com/eb1s6shc?key=79594509f41396d2b2075326c6ab797c
+   * ============================================================================
+   */
+  const AD_CONFIG = {
+    enabled: true,
+
+    // الرابط المباشر للربح الإضافي (يفتح في نافذة جديدة فقط عند ضغط الزائر على زر الراعي)
+    directSmartLink: 'https://www.profitableratecpmnetwork.com/eb1s6shc?key=79594509f41396d2b2075326c6ab797c',
+
+    // وحدات البانر المفعّلة (Adsterra / HighRevenueFormat)
+    units: {
+      banner_728x90: {
+        key: '71b51a1973d418aab7666f5c38587bc9',
+        width: 728,
+        height: 90,
+        invokeSrc: 'https://www.highrevenueformat.com/71b51a1973d418aab7666f5c38587bc9/invoke.js'
+      },
+      banner_300x250: {
+        key: 'b6ea58cccfaf6daac0213b20606aefb4',
+        width: 300,
+        height: 250,
+        invokeSrc: 'https://www.highrevenueformat.com/b6ea58cccfaf6daac0213b20606aefb4/invoke.js'
+      }
+    },
+
+    // توزيع الوحدات تلقائياً حسب الشاشة والمكان لتحقيق أعلى أرباح بدون إزعاج اللاعب
+    slots: {
+      landing_banner: {
+        desktopUnit: 'banner_728x90',
+        mobileUnit: 'banner_300x250',
+        showSmartLinkBar: true,
+        smartLinkLabel: '🎁 عروض ومكافآت برعاية شركائنا — اضغط للاستكشاف'
+      },
+      lobby_banner: {
+        desktopUnit: 'banner_728x90',
+        mobileUnit: 'banner_300x250',
+        showSmartLinkBar: false
+      },
+      sidebar_box: {
+        desktopUnit: 'banner_300x250',
+        mobileUnit: 'banner_300x250',
+        showSmartLinkBar: true,
+        smartLinkLabel: '🔥 ادعم استمرار اللعبة مجاناً — تصفح عرض الراعي'
+      },
+      winner_banner: {
+        desktopUnit: 'banner_300x250',
+        mobileUnit: 'banner_300x250',
+        showSmartLinkBar: true,
+        smartLinkLabel: '🏆 جوائز وعروض مميزة من الراعي الرسمي'
+      }
+    }
+  };
+
+  function isContainerVisible(el) {
+    if (!el || el.classList.contains('hidden')) return false;
+    if (typeof root.getComputedStyle === 'function') {
+      const st = root.getComputedStyle(el);
+      if (st.display === 'none' || st.visibility === 'hidden') return false;
+    }
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0;
+  }
+
+  function pickUnitForSlot(slotCfg) {
+    const isWide = (root.innerWidth || 1024) >= 760;
+    const unitName = isWide ? slotCfg.desktopUnit : slotCfg.mobileUnit;
+    return AD_CONFIG.units[unitName] || AD_CONFIG.units.banner_300x250;
+  }
+
+  function mountAdsterraIframe(wrapperEl, unit) {
+    if (!wrapperEl || !unit) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.width = String(unit.width);
+    iframe.height = String(unit.height);
+    iframe.setAttribute('scrolling', 'no');
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('marginwidth', '0');
+    iframe.setAttribute('marginheight', '0');
+    iframe.setAttribute('title', 'إعلان ممول');
+    iframe.className = 'ad-unit-iframe';
+    iframe.style.width = unit.width + 'px';
+    iframe.style.height = unit.height + 'px';
+    iframe.style.maxWidth = '100%';
+    iframe.style.border = '0';
+    iframe.style.overflow = 'hidden';
+    iframe.style.display = 'block';
+    iframe.style.margin = '0 auto';
+
+    wrapperEl.appendChild(iframe);
+
+    const baseHref = (root.location && root.location.origin && root.location.origin !== 'null')
+      ? (root.location.origin + '/')
+      : 'https://vercel.app/';
+
+    const htmlDoc =
+      '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+      '<base href="' + baseHref + '" target="_blank">' +
+      '<style>html,body{margin:0;padding:0;overflow:hidden;background:transparent;display:flex;align-items:center;justify-content:center;}</style>' +
+      '</head><body>' +
+      '<scr' + 'ipt type="text/javascript">' +
+      'window.atOptions = {' +
+      "'key' : '" + unit.key + "'," +
+      "'format' : 'iframe'," +
+      "'height' : " + unit.height + ',' +
+      "'width' : " + unit.width + ',' +
+      "'params' : {}" +
+      '};' +
+      '</scr' + 'ipt>' +
+      '<scr' + 'ipt type="text/javascript" src="' + unit.invokeSrc + '"></scr' + 'ipt>' +
+      '</body></html>';
+
+    try {
+      const doc = iframe.contentWindow && iframe.contentWindow.document;
+      if (doc) {
+        doc.open();
+        doc.write(htmlDoc);
+        doc.close();
+      } else {
+        iframe.srcdoc = htmlDoc;
+      }
+    } catch (_err) {
+      iframe.srcdoc = htmlDoc;
+    }
+  }
+
+  function renderSlot(container) {
+    if (!container) return;
+    const slotKey = container.getAttribute('data-ad-slot-key');
+    const slotCfg = (slotKey && AD_CONFIG.slots[slotKey]) || null;
+
+    if (!AD_CONFIG.enabled || !slotCfg) {
+      container.classList.add('hidden');
+      container.innerHTML = '';
+      return;
+    }
+
+    container.classList.remove('hidden');
+
+    // الانتظار حتى تصبح الحاوية مرئية فعلياً على الشاشة لضمان احتساب المشاهدات وتحميل البانر بنجاح
+    if (!isContainerVisible(container)) {
+      return;
+    }
+
+    const chosenUnit = pickUnitForSlot(slotCfg);
+    const renderedKey = container.getAttribute('data-ad-rendered-unit');
+    if (renderedKey === chosenUnit.key) {
+      return;
+    }
+
+    container.setAttribute('data-ad-rendered-unit', chosenUnit.key);
+    container.innerHTML = '';
+
+    const badge = document.createElement('div');
+    badge.className = 'ad-slot-badge';
+    badge.textContent = 'إعلان';
+    container.appendChild(badge);
+
+    const frameWrap = document.createElement('div');
+    frameWrap.className = 'ad-iframe-wrap';
+    container.appendChild(frameWrap);
+
+    mountAdsterraIframe(frameWrap, chosenUnit);
+
+    if (slotCfg.showSmartLinkBar && AD_CONFIG.directSmartLink) {
+      const link = document.createElement('a');
+      link.className = 'ad-smartlink-bar';
+      link.href = AD_CONFIG.directSmartLink;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer sponsored';
+      link.textContent = slotCfg.smartLinkLabel || '🎁 عرض مميز من الراعي — اضغط هنا';
+      container.appendChild(link);
+    }
+  }
+
+  function refreshAllAds(scopeEl) {
+    if (typeof document === 'undefined') return;
+    const rootNode = scopeEl || document;
+    const containers = rootNode.querySelectorAll('[data-ad-slot-key]');
+    containers.forEach(renderSlot);
+  }
+
+  root.BankElHazAds = {
+    config: AD_CONFIG,
+    refresh: refreshAllAds
+  };
+})(typeof window !== 'undefined' ? window : globalThis);

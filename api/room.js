@@ -184,7 +184,8 @@ function executeAction(room, playerId, payload) {
     case 'UNMORTGAGE': return Engine.unmortgageProperty(room, playerId, Number(payload.tileId));
     case 'SETTLE_DEBT': return Engine.settleDebt(room, playerId);
     case 'BANKRUPT': return Engine.declareBankruptcy(room, playerId, { targetId: payload.targetId });
-    case 'END_TURN': return Engine.endTurn(room, playerId);
+    case 'END_TURN': return Engine.endTurn(room, playerId, payload);
+    case 'FINISH_BY_WEALTH': return Engine.finishGameByWealth(room, playerId);
     case 'PROPOSE_TRADE': return Engine.proposeTrade(room, playerId, payload);
     case 'RESPOND_TRADE': return Engine.respondTrade(room, playerId, payload);
     case 'CANCEL_TRADE': return Engine.cancelTrade(room, playerId, payload.tradeId);

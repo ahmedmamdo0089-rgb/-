@@ -2,9 +2,9 @@
   'use strict';
 
   const Data = window.BankElHazData;
-  const Engine = window.BankElHazEngine;
   const AudioFX = window.BankElHazAudio;
   const Network = window.BankElHazNetwork;
+  const Ads = window.BankElHazAds;
 
   const {
     GAME_CONFIG,
@@ -24,12 +24,21 @@
     selectedAvatarId: PLAYER_PRESETS[0].id,
     displayedPositions: {},
     animatingMoveTs: 0,
+    isAnimatingMove: false,
+    buyUnlockAt: 0,
+    buyUnlockTimer: null,
+    lastPendingBuyKey: null,
+    actionInFlight: false,
     lastRollTs: 0,
     lastCardTs: 0,
+    lastEliminatedTs: 0,
     lastLogId: null,
     lastChatCount: 0,
     unreadChat: 0,
     knownTradeIds: new Set(),
+    editingCounterTradeId: null,
+    prevPlayerCash: {},
+    cashInitialized: false,
     diceSpinCycle: 0,
     openTileModalId: null,
     boardZoomed: false,
@@ -50,7 +59,9 @@
       'lobbyRoomCode', 'inviteUrlInput', 'copyInviteBtn', 'whatsappShareBtn',
       'lobbyCountText', 'addBotBtn', 'lobbyPlayersGrid',
       'startingCashSelect', 'freeParkingCheckbox', 'startGameBtn', 'lobbyWaitHint',
-      'mobileMyAvatar', 'mobileMyName', 'mobileMyCash', 'mobileTurnBadge', 'boardZoomToggleBtn',
+      'mobileMyAvatar', 'mobileMyName', 'mobileMyCash', 'mobileTurnBadge',
+      'finishByWealthBtn', 'hostFinishGameSideBtn', 'boardZoomToggleBtn',
+      'incomingTradeBanner',
       'drawerPlayers', 'drawerSocial', 'playersList', 'myAssetsCount', 'myAssetsList',
       'openTradeFromAssetsBtn', 'boardScrollWrapper', 'boardGrid', 'boardCenter',
       'parkingPotBadge', 'die1', 'die2', 'diceResultLabel', 'drawnCardBanner',
@@ -58,8 +69,11 @@
       'activeTradesBox', 'unreadChatBadge', 'eventLogs', 'chatMessages', 'chatForm', 'chatInput',
       'mobileBottomNav', 'mobTradeBadge', 'mobChatBadge',
       'tileModal', 'tileModalBody',
-      'tradeModal', 'tradeTargetSelect', 'tradeMyCash', 'tradeMyCards', 'tradeMyProps',
-      'tradeTheirCash', 'tradeTheirCards', 'tradeTheirProps', 'submitTradeBtn',
+      'tradeModal', 'tradeModalTitle', 'tradeCounterHint',
+      'tradeTargetSelect', 'tradeMyMaxCashHint', 'tradeTheirMaxCashHint',
+      'tradeMyCash', 'tradeMyCards', 'tradeMyProps',
+      'tradeTheirCash', 'tradeTheirCards', 'tradeTheirProps',
+      'tradeNoteInput', 'submitTradeBtn',
       'winnerModal', 'winnerTitle', 'winnerSubtitle', 'winnerStandings', 'winnerExitBtn',
       'toastContainer'
     ];
@@ -77,6 +91,23 @@
       .replace(/"/g, '&quot;');
   }
 
+  function hexToRgba(hex, alpha) {
+    const clean = String(hex || '').replace('#', '').trim();
+    if (clean.length !== 6) return 'rgba(16, 185, 129, ' + alpha + ')';
+    const r = parseInt(clean.slice(0, 2), 16) || 0;
+    const g = parseInt(clean.slice(2, 4), 16) || 0;
+    const b = parseInt(clean.slice(4, 6), 16) || 0;
+    return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+  }
+
+  function formatSignedCash(amount) {
+    const n = Number(amount) || 0;
+    if (n < 0) {
+      return '-' + Math.abs(n).toLocaleString('en-US') + ' ج.م';
+    }
+    return formatMoney(n);
+  }
+
   function showToast(msg, type) {
     if (!els.toastContainer) return;
     const t = document.createElement('div');
@@ -85,7 +116,91 @@
     els.toastContainer.appendChild(t);
     setTimeout(function () {
       if (t.parentNode) t.parentNode.removeChild(t);
-    }, 3400);
+    }, 3600);
+  }
+
+  // ==================== Floating Cash Delta Animations (+ Green / - Red) ====================
+  let cashFxLayerEl = null;
+  function ensureCashFxLayer() {
+    if (cashFxLayerEl && cashFxLayerEl.parentNode) return cashFxLayerEl;
+    cashFxLayerEl = document.createElement('div');
+    cashFxLayerEl.className = 'cash-fx-layer';
+    document.body.appendChild(cashFxLayerEl);
+    return cashFxLayerEl;
+  }
+
+  function spawnBadgeAtElement(targetEl, text, isPlus) {
+    if (!targetEl) return false;
+    const rect = targetEl.getBoundingClientRect();
+    if (!rect || (rect.width === 0 && rect.height === 0)) return false;
+
+    const layer = ensureCashFxLayer();
+    const badge = document.createElement('div');
+    badge.className = 'cash-fly-badge ' + (isPlus ? 'plus' : 'minus');
+    badge.textContent = text;
+    badge.style.left = Math.round(rect.left + rect.width / 2) + 'px';
+    badge.style.top = Math.round(rect.top + rect.height / 2) + 'px';
+    layer.appendChild(badge);
+
+    const bumpClass = isPlus ? 'cash-bump-plus' : 'cash-bump-minus';
+    targetEl.classList.remove('cash-bump-plus', 'cash-bump-minus');
+    void targetEl.offsetWidth;
+    targetEl.classList.add(bumpClass);
+
+    setTimeout(function () {
+      targetEl.classList.remove(bumpClass);
+    }, 550);
+
+    setTimeout(function () {
+      if (badge.parentNode) badge.parentNode.removeChild(badge);
+    }, 1400);
+    return true;
+  }
+
+  function trackAndAnimateCashChanges(state) {
+    if (!state || !Array.isArray(state.players)) return;
+
+    if (!ui.cashInitialized || state.status === 'LOBBY') {
+      ui.prevPlayerCash = {};
+      state.players.forEach(function (p) {
+        ui.prevPlayerCash[p.id] = p.cash;
+      });
+      ui.cashInitialized = state.status !== 'LOBBY';
+      return;
+    }
+
+    state.players.forEach(function (p) {
+      const prev = ui.prevPlayerCash[p.id];
+      ui.prevPlayerCash[p.id] = p.cash;
+      if (prev === undefined || prev === p.cash) return;
+
+      const delta = p.cash - prev;
+      if (delta === 0) return;
+
+      const isPlus = delta > 0;
+      const sign = isPlus ? '+' : '-';
+      const absStr = Math.abs(delta).toLocaleString('en-US');
+      const deltaText = sign + absStr + ' ج.م';
+
+      let shownAny = false;
+      if (p.id === ui.myPlayerId && els.mobileMyCash) {
+        if (spawnBadgeAtElement(els.mobileMyCash, deltaText, isPlus)) {
+          shownAny = true;
+        }
+      }
+
+      const pcCashEl = document.getElementById('pcCash_' + p.id);
+      if (pcCashEl) {
+        if (spawnBadgeAtElement(pcCashEl, deltaText, isPlus)) {
+          shownAny = true;
+        }
+      }
+
+      // On mobile when side drawer is closed, show other players' cash changes near turn pill
+      if (!shownAny && els.mobileTurnBadge) {
+        spawnBadgeAtElement(els.mobileTurnBadge, p.icon + ' ' + deltaText, isPlus);
+      }
+    });
   }
 
   function buildInviteUrl(code) {
@@ -151,6 +266,7 @@
     });
     const inRoom = screenName === 'lobby' || screenName === 'game';
     els.headerRoomBar.classList.toggle('hidden', !inRoom);
+    if (Ads) Ads.refresh();
   }
 
   // ==================== Avatar Picker ====================
@@ -169,7 +285,6 @@
 
   // ==================== Board Static Construction ====================
   function buildBoardDOM() {
-    // Clear existing tiles while preserving #boardCenter and #tokensLayer
     Array.from(els.boardGrid.querySelectorAll('.board-tile')).forEach(function (el) {
       el.remove();
     });
@@ -178,20 +293,27 @@
       const coords = getGridCoords(tile.id);
       const isCorner = coords.side.indexOf('corner') === 0;
       const isProp = tile.type === 'property';
+      const hasColorBar = Boolean(isProp && COLOR_GROUPS[tile.group]);
+
       const div = document.createElement('div');
-      div.className = 'board-tile' + (isCorner ? ' corner-tile' : '') + (isProp ? ' property-tile' : '');
+      div.className =
+        'board-tile' +
+        (isCorner ? ' corner-tile' : '') +
+        (isProp ? ' property-tile' : '') +
+        (hasColorBar ? ' has-color-bar' : '');
       div.dataset.tileId = String(tile.id);
       div.style.gridRow = String(coords.row);
       div.style.gridColumn = String(coords.col);
 
       let colorHeaderHtml = '';
-      if (isProp && COLOR_GROUPS[tile.group]) {
+      if (hasColorBar) {
         const grp = COLOR_GROUPS[tile.group];
         colorHeaderHtml =
           '<div class="tile-color-bar" id="tileBar_' + tile.id + '" style="background:' + grp.color + ';color:' + grp.textColor + '"></div>';
       }
 
-      const iconHtml = isProp ? '' : ('<div class="tile-icon">' + tile.icon + '</div>');
+      // Always display the governorate/tile emblem at the top of the card
+      const iconHtml = '<div class="tile-top-emblem"><span class="tile-icon">' + tile.icon + '</span></div>';
 
       let bottomPriceHtml = '';
       if (tile.price) {
@@ -199,15 +321,15 @@
       } else if (tile.taxAmount) {
         bottomPriceHtml = '<div class="tile-price">-' + tile.taxAmount.toLocaleString('en-US') + '</div>';
       } else if (tile.id === 0) {
-        bottomPriceHtml = '<div class="tile-price">+2,000</div>';
+        bottomPriceHtml = '<div class="tile-price">+' + GAME_CONFIG.GO_SALARY.toLocaleString('en-US') + '</div>';
       }
 
       div.innerHTML =
         colorHeaderHtml +
+        '<div class="tile-owner-stamp hidden" id="tileStamp_' + tile.id + '"></div>' +
         iconHtml +
         '<div class="tile-name">' + escapeHtml(tile.shortName || tile.name) + '</div>' +
-        bottomPriceHtml +
-        '<div class="tile-owner-ribbon" id="tileOwner_' + tile.id + '"></div>';
+        bottomPriceHtml;
 
       div.addEventListener('click', function () {
         AudioFX.click();
@@ -315,7 +437,7 @@
       rollerName + ' رمى: ' + r.d1 + ' + ' + r.d2 + ' = ' + r.total + (r.isDoubles ? ' (دبل! 🎯)' : '');
   }
 
-  // ==================== Smooth Token Positioning & Hopping ====================
+  // ==================== Smooth Token Positioning & Anti-Auto-Buy Hopping ====================
   function getTileCenterPx(tileId, slotIdx, slotTotal) {
     const tileEl = els.boardGrid.querySelector('.board-tile[data-tile-id="' + tileId + '"]');
     if (!tileEl) return { x: 0, y: 0 };
@@ -357,7 +479,6 @@
       tokenEl.classList.toggle('active-player-token', Boolean(currentP && currentP.id === p.id));
     });
 
-    // Remove bankrupt or departed tokens
     Array.from(els.tokensLayer.children).forEach(function (child) {
       const pid = child.id.replace('token_', '');
       if (!activeIds.has(pid)) {
@@ -388,12 +509,25 @@
     });
   }
 
+  function scheduleBuyButtonUnlock(delayMs) {
+    ui.buyUnlockAt = Date.now() + (delayMs || 500);
+    if (ui.buyUnlockTimer) clearTimeout(ui.buyUnlockTimer);
+    ui.buyUnlockTimer = setTimeout(function () {
+      ui.buyUnlockTimer = null;
+      if (ui.state && ui.state.turnPhase === 'BUY_DECISION') {
+        renderTurnHub(ui.state);
+      }
+    }, (delayMs || 500) + 30);
+  }
+
   function animateMoveIfNeeded(state) {
     syncTokenElements(state);
     const mv = state.lastMove;
     if (!mv || mv.timestamp === ui.animatingMoveTs || !Array.isArray(mv.path) || mv.path.length < 2) {
-      state.players.forEach(function (p) { ui.displayedPositions[p.id] = p.position; });
-      layoutAllTokensStatic(state);
+      if (!ui.isAnimatingMove) {
+        state.players.forEach(function (p) { ui.displayedPositions[p.id] = p.position; });
+        layoutAllTokensStatic(state);
+      }
       return;
     }
 
@@ -401,20 +535,27 @@
     const pid = mv.playerId;
     const tokenEl = document.getElementById('token_' + pid);
     if (!tokenEl) {
+      ui.isAnimatingMove = false;
       state.players.forEach(function (p) { ui.displayedPositions[p.id] = p.position; });
       layoutAllTokensStatic(state);
       return;
     }
 
+    ui.isAnimatingMove = true;
     const steps = mv.path.slice(1);
     let idx = 0;
 
     function nextHop() {
       if (idx >= steps.length) {
         tokenEl.classList.remove('hopping');
+        ui.isAnimatingMove = false;
         if (ui.state) {
           ui.state.players.forEach(function (p) { ui.displayedPositions[p.id] = p.position; });
           layoutAllTokensStatic(ui.state);
+          if (ui.state.turnPhase === 'BUY_DECISION') {
+            scheduleBuyButtonUnlock(420);
+          }
+          renderTurnHub(ui.state);
         }
         return;
       }
@@ -426,29 +567,44 @@
       tokenEl.style.top = pt.y + 'px';
       AudioFX.step();
       idx += 1;
-      setTimeout(nextHop, mv.directJump ? 240 : 130);
+      setTimeout(nextHop, mv.directJump ? 220 : 120);
     }
 
     nextHop();
   }
 
-  // ==================== Board Ownership & Buildings Rendering ====================
+  // ==================== Board Ownership Stamp & Buildings Rendering ====================
   function updateBoardTilesUI(state) {
     Object.keys(state.properties).forEach(function (tid) {
       const prop = state.properties[tid];
       const tileEl = els.boardGrid.querySelector('.board-tile[data-tile-id="' + tid + '"]');
-      const ribbonEl = document.getElementById('tileOwner_' + tid);
+      const stampEl = document.getElementById('tileStamp_' + tid);
       const barEl = document.getElementById('tileBar_' + tid);
-      if (!tileEl || !ribbonEl) return;
+      if (!tileEl) return;
 
       tileEl.classList.toggle('is-mortgaged', Boolean(prop.mortgaged));
 
-      if (prop.ownerId) {
-        const owner = state.players.find(function (p) { return p.id === prop.ownerId; });
-        ribbonEl.style.background = owner ? owner.color : 'transparent';
-        ribbonEl.style.height = '5px';
+      const owner = prop.ownerId
+        ? state.players.find(function (p) { return p.id === prop.ownerId; })
+        : null;
+
+      if (owner) {
+        tileEl.classList.add('is-owned');
+        tileEl.style.setProperty('--owner-color', owner.color);
+        tileEl.style.setProperty('--owner-tint', hexToRgba(owner.color, 0.16));
+        if (stampEl) {
+          stampEl.classList.remove('hidden');
+          stampEl.textContent = owner.icon;
+          stampEl.title = 'ملك: ' + owner.name;
+        }
       } else {
-        ribbonEl.style.background = 'transparent';
+        tileEl.classList.remove('is-owned');
+        tileEl.style.removeProperty('--owner-color');
+        tileEl.style.removeProperty('--owner-tint');
+        if (stampEl) {
+          stampEl.classList.add('hidden');
+          stampEl.textContent = '';
+        }
       }
 
       if (barEl) {
@@ -469,6 +625,12 @@
     const current = state.players[state.currentTurnIndex];
     const me = state.players.find(function (p) { return p.id === ui.myPlayerId; });
     const isMyTurn = Boolean(current && current.id === ui.myPlayerId && !current.bankrupt);
+    const isHost = state.hostId === ui.myPlayerId;
+
+    // Host Finish-by-Wealth option (available after turn 4)
+    const canHostFinish = Boolean(isHost && state.status === 'PLAYING' && state.turnNumber >= 4);
+    if (els.finishByWealthBtn) els.finishByWealthBtn.classList.toggle('hidden', !canHostFinish);
+    if (els.hostFinishGameSideBtn) els.hostFinishGameSideBtn.classList.toggle('hidden', !canHostFinish);
 
     // Parking Pot
     if (state.settings.freeParkingPot) {
@@ -498,7 +660,8 @@
       els.mobileMyAvatar.textContent = me.icon;
       els.mobileMyAvatar.style.background = me.color;
       els.mobileMyName.textContent = me.name;
-      els.mobileMyCash.textContent = me.bankrupt ? 'مفلس 🏳️' : formatMoney(me.cash);
+      els.mobileMyCash.textContent = me.bankrupt ? 'خاسر / مفلس 🏳️' : formatSignedCash(me.cash);
+      els.mobileMyCash.classList.toggle('is-negative-cash', Boolean(!me.bankrupt && me.cash < 0));
     }
     els.mobileTurnBadge.textContent = current
       ? (isMyTurn ? '🎯 دورك الآن!' : ('دور: ' + current.name))
@@ -510,16 +673,24 @@
       return;
     }
 
+    // Prevent ghost-click auto-purchase while token is hopping to destination tile
+    if (ui.isAnimatingMove && isMyTurn && state.turnPhase === 'BUY_DECISION') {
+      els.turnBanner.textContent = '🚶 جاري التحرك إلى الخانة الجديدة...';
+      els.actionButtonsContainer.innerHTML = '';
+      return;
+    }
+
     if (!isMyTurn) {
       els.turnBanner.innerHTML =
         'الدور الآن عند <span style="color:' + current.color + '">' + current.icon + ' ' + escapeHtml(current.name) + '</span>' +
+        (current.cash < 0 ? ' <small style="color:#f87171">(مديون: ' + formatSignedCash(current.cash) + ')</small>' : '') +
         (!current.connected ? ' <small style="color:#fca5a5">(منقطع الاتصال ⚠️)</small>' : '');
 
       let waitBtns = '';
       if (me && !me.bankrupt) {
         waitBtns += '<button class="btn btn-outline btn-sm" id="hubOpenTradeBtn" type="button">🤝 عرض مقايضة</button>';
       }
-      if (state.hostId === ui.myPlayerId && !current.connected && !current.isBot) {
+      if (isHost && !current.connected && !current.isBot) {
         waitBtns +=
           '<button class="btn btn-danger btn-sm" id="forceDisconnectBankruptBtn" type="button">' +
           'استبعاد اللاعب المنقطع 🏳️' +
@@ -528,6 +699,17 @@
       els.actionButtonsContainer.innerHTML = waitBtns;
       bindHubDynamicButtons(state);
       return;
+    }
+
+    // Track new BUY_DECISION prompt to apply a brief safety lock against accidental double-taps
+    const buyKey = state.turnPhase === 'BUY_DECISION'
+      ? (state.turnNumber + ':' + state.pendingPurchaseTileId + ':' + (state.lastRoll ? state.lastRoll.timestamp : 0))
+      : null;
+    if (buyKey && buyKey !== ui.lastPendingBuyKey) {
+      ui.lastPendingBuyKey = buyKey;
+      scheduleBuyButtonUnlock(500);
+    } else if (!buyKey) {
+      ui.lastPendingBuyKey = null;
     }
 
     // It IS my turn!
@@ -554,33 +736,30 @@
     } else if (phase === 'BUY_DECISION' && state.pendingPurchaseTileId !== null) {
       const tile = BOARD_TILES[state.pendingPurchaseTileId];
       const canAfford = current.cash >= tile.price;
-      els.turnBanner.textContent = '🏛️ فرصة استثمارية في "' + tile.name + '"!';
+      const buyLocked = Date.now() < ui.buyUnlockAt;
+      els.turnBanner.textContent = '🏛️ هل ترغب في شراء "' + tile.name + '"؟';
       html +=
         '<div class="buy-prompt-box">' +
         '<strong>' + tile.icon + ' ' + escapeHtml(tile.name) + '</strong> — السعر: <strong>' + formatMoney(tile.price) + '</strong>' +
-        (!canAfford ? '<div style="color:#fca5a5;margin-top:3px">رصيدك غير كافٍ حالياً (يمكنك رهن عقار أو تخطي الشراء)</div>' : '') +
+        (!canAfford ? '<div style="color:#fca5a5;margin-top:3px">رصيدك غير كافٍ للشراء (يمكنك رهن محافظة أو تخطي الشراء)</div>' : '') +
         '</div>' +
-        '<button class="btn btn-emerald" id="hubBuyBtn" type="button" ' + (!canAfford ? 'disabled' : '') + '>' +
+        '<button class="btn btn-emerald" id="hubBuyBtn" type="button" ' + ((!canAfford || buyLocked) ? 'disabled' : '') + '>' +
         '🏛️ شراء (' + formatMoney(tile.price) + ')' +
         '</button>' +
-        '<button class="btn btn-outline" id="hubSkipBuyBtn" type="button">تخطي الشراء</button>' +
-        '<button class="btn btn-outline btn-sm" data-inspect-tile="' + tile.id + '" type="button">📄 التفاصيل</button>';
-    } else if (phase === 'DEBT_RESOLUTION' && state.pendingDebt) {
-      const debt = state.pendingDebt;
-      const canPayNow = current.cash >= debt.amount;
-      els.turnBanner.textContent = '⚠️ تسوية مديونية عاجلة!';
+        '<button class="btn btn-outline" id="hubSkipBuyBtn" type="button" ' + (buyLocked ? 'disabled' : '') + '>تخطي الشراء</button>' +
+        '<button class="btn btn-outline btn-sm" data-inspect-tile="' + tile.id + '" type="button">📄 العقد</button>';
+    } else if (phase === 'DEBT_RESOLUTION' || (phase === 'END_TURN' && current.cash < 0)) {
+      const shortfall = Math.abs(current.cash);
+      els.turnBanner.textContent = '🚨 رصيدك بالسالب! سدد المديونية قبل نهاية الدور';
       html +=
         '<div class="debt-prompt-box">' +
-        'المطلوب سداده: <strong>' + formatMoney(debt.amount) + '</strong> (' + escapeHtml(debt.reason) + ')<br/>' +
-        'رصيدك الحالي: <strong>' + formatMoney(current.cash) + '</strong>' +
-        '</div>';
-      if (canPayNow) {
-        html += '<button class="btn btn-emerald" id="hubSettleDebtBtn" type="button">✅ سداد الدين الآن (' + formatMoney(debt.amount) + ')</button>';
-      }
-      html +=
-        '<button class="btn btn-outline btn-sm" id="hubManagePropsBtn" type="button">🏛️ بيع مبانٍ / رهن</button>' +
-        '<button class="btn btn-outline btn-sm" id="hubOpenTradeBtn" type="button">🤝 مقايضة طارئة</button>' +
-        '<button class="btn btn-danger btn-sm" id="hubBankruptBtn" type="button">🏳️ إعلان الإفلاس</button>';
+        'رصيدك الحالي: <strong style="direction:ltr;display:inline-block">' + formatSignedCash(current.cash) + '</strong>' +
+        (current.debtReason ? ' (' + escapeHtml(current.debtReason) + ')' : '') +
+        '<br/>ارهن محافظة أو بع منزلاً أو قايض الآن لاسترداد ' + formatMoney(shortfall) + ' قبل إنهاء الدور وإلا ستخسر!' +
+        '</div>' +
+        '<button class="btn btn-gold btn-sm" id="hubManagePropsBtn" type="button">🏛️ بيع مبانٍ / رهن محافظات</button>' +
+        '<button class="btn btn-emerald btn-sm" id="hubOpenTradeBtn" type="button">🤝 صفقة مقايضة للإنقاذ</button>' +
+        '<button class="btn btn-danger btn-sm" id="hubEndTurnBtn" type="button">🏳️ إنهاء الدور (إعلان الخسارة)</button>';
     } else if (phase === 'END_TURN') {
       els.turnBanner.textContent = '✅ اكتملت حركتك — يمكنك البناء أو المقايضة أو إنهاء دورك';
       html +=
@@ -599,25 +778,49 @@
       if (el) el.addEventListener('click', handler);
     };
 
-    on('hubRollBtn', function () { dispatchGameAction({ type: 'ROLL_DICE' }); });
-    on('hubPayBailBtn', function () { dispatchGameAction({ type: 'PAY_BAIL' }); });
-    on('hubUseCardBtn', function () { dispatchGameAction({ type: 'USE_JAIL_CARD' }); });
+    on('hubRollBtn', function () {
+      dispatchGameAction({ type: 'ROLL_DICE' });
+    });
+    on('hubPayBailBtn', function () {
+      dispatchGameAction({ type: 'PAY_BAIL' });
+    });
+    on('hubUseCardBtn', function () {
+      dispatchGameAction({ type: 'USE_JAIL_CARD' });
+    });
     on('hubBuyBtn', function () {
+      if (Date.now() < ui.buyUnlockAt || ui.isAnimatingMove) return;
       dispatchGameAction({ type: 'BUY_PROPERTY' }).then(function (r) {
         if (r && r.ok) AudioFX.buy();
       });
     });
-    on('hubSkipBuyBtn', function () { dispatchGameAction({ type: 'SKIP_PURCHASE' }); });
-    on('hubEndTurnBtn', function () { dispatchGameAction({ type: 'END_TURN' }); });
+    on('hubSkipBuyBtn', function () {
+      if (Date.now() < ui.buyUnlockAt || ui.isAnimatingMove) return;
+      dispatchGameAction({ type: 'SKIP_PURCHASE' });
+    });
+    on('hubEndTurnBtn', function () {
+      const cur = state.players[state.currentTurnIndex];
+      if (cur && cur.id === ui.myPlayerId && cur.cash < 0 && cur.liquidatable <= 0) {
+        if (!window.confirm('رصيدك بالسالب (' + formatSignedCash(cur.cash) + ') ولا تملك عقارات لرهنها. هل تؤكد إنهاء دورك وإعلان الخسارة؟')) {
+          return;
+        }
+      }
+      dispatchGameAction({ type: 'END_TURN' }).then(function (res) {
+        if (res && res.needsLossConfirm) {
+          const confirmGiveUp = window.confirm(
+            res.error + '\n\nاضغط "إلغاء" للبقاء في دورك ورهن أملاكك أو المقايضة، أو "موافق" لإعلان إفلاسك وخسارتك الآن.'
+          );
+          if (confirmGiveUp) {
+            dispatchGameAction({ type: 'END_TURN', confirmLoss: true });
+          } else {
+            switchToAssetsView();
+          }
+        }
+      });
+    });
     on('hubSettleDebtBtn', function () {
       dispatchGameAction({ type: 'SETTLE_DEBT' }).then(function (r) {
         if (r && r.ok) AudioFX.buy();
       });
-    });
-    on('hubBankruptBtn', function () {
-      if (window.confirm('هل أنت متأكد من إعلان إفلاسك وخروجك من المنافسة؟')) {
-        dispatchGameAction({ type: 'BANKRUPT' });
-      }
     });
     on('forceDisconnectBankruptBtn', function () {
       const cur = state.players[state.currentTurnIndex];
@@ -648,22 +851,31 @@
       const badges = [];
       if (p.id === ui.myPlayerId) badges.push('<span class="mini-tag">أنت</span>');
       if (isTurn) badges.push('<span class="mini-tag turn">🎯 دوره الآن</span>');
+      if (!p.bankrupt && p.cash < 0) badges.push('<span class="mini-tag debt">🚨 مديون بالسالب</span>');
       if (p.inJail) badges.push('<span class="mini-tag jail">🔒 في السجن</span>');
       if (p.jailFreeCards > 0) badges.push('<span class="mini-tag">🕊️ بطاقة عفو ×' + p.jailFreeCards + '</span>');
-      if (p.bankrupt) badges.push('<span class="mini-tag jail">🏳️ مفلس</span>');
+      if (p.bankrupt) badges.push('<span class="mini-tag jail">💥 خسر (مفلس)</span>');
       if (!p.connected) badges.push('<span class="mini-tag jail">⚠️ غير متصل</span>');
 
       const dotsHtml = ownedIds.map(function (tid) {
         const tile = BOARD_TILES[Number(tid)];
         const prop = state.properties[tid];
         const bg = tile.group ? COLOR_GROUPS[tile.group].color : (tile.type === 'station' ? '#475569' : '#0f766e');
-        const label = tile.shortName + (prop.houses === 5 ? '🏨' : (prop.houses > 0 ? '🏠' + prop.houses : '')) + (prop.mortgaged ? ' (رهن)' : '');
-        return '<span class="prop-dot" data-tile-jump="' + tile.id + '" style="background:' + bg + '">' + escapeHtml(label) + '</span>';
+        const txtColor = (tile.group && COLOR_GROUPS[tile.group].textColor) ? COLOR_GROUPS[tile.group].textColor : '#ffffff';
+        const bldg = prop.houses === 5 ? ' 🏨' : (prop.houses > 0 ? ' 🏠' + prop.houses : '');
+        const mort = prop.mortgaged ? ' (رهن)' : '';
+        return (
+          '<span class="prop-dot" data-tile-jump="' + tile.id + '" style="background:' + bg + ';color:' + txtColor + '">' +
+          tile.icon + ' ' + escapeHtml(tile.shortName || tile.name) + bldg + mort +
+          '</span>'
+        );
       }).join('');
 
       const canTradeWith = !p.bankrupt && p.id !== ui.myPlayerId && state.players.some(function (me) {
         return me.id === ui.myPlayerId && !me.bankrupt;
       });
+
+      const cashClass = (!p.bankrupt && p.cash < 0) ? 'pc-cash is-negative-cash' : 'pc-cash';
 
       return (
         '<div class="player-card ' + (isTurn ? 'active-turn ' : '') + (p.bankrupt ? 'is-bankrupt' : '') + '">' +
@@ -672,10 +884,12 @@
         '<div class="pc-avatar" style="background:' + p.color + '">' + p.icon + '</div>' +
         '<div>' +
         '<div class="pc-name">' + escapeHtml(p.name) + '</div>' +
-        '<small style="color:#94a3b8;font-size:0.72rem">صافي الثروة: ' + formatMoney(p.netWorth) + '</small>' +
+        '<small style="color:#94a3b8;font-size:0.74rem">صافي الثروة: ' + formatSignedCash(p.netWorth) + '</small>' +
         '</div>' +
         '</div>' +
-        '<div class="pc-cash">' + (p.bankrupt ? '0 ج.م' : formatMoney(p.cash)) + '</div>' +
+        '<div id="pcCash_' + p.id + '" class="' + cashClass + '" style="direction:ltr">' +
+        (p.bankrupt ? 'خسر 🏳️' : formatSignedCash(p.cash)) +
+        '</div>' +
         '</div>' +
         '<div class="pc-badges">' + badges.join('') + '</div>' +
         (dotsHtml ? '<div class="pc-props-dots">' + dotsHtml + '</div>' : '') +
@@ -696,7 +910,7 @@
 
     if (myPropIds.length === 0) {
       els.myAssetsList.innerHTML =
-        '<div style="text-align:center;color:#94a3b8;padding:24px 10px;font-size:0.85rem">' +
+        '<div style="text-align:center;color:#94a3b8;padding:24px 10px;font-size:0.9rem">' +
         'لا تملك أي محافظات أو مرافق بعد. ارمِ النرد واشترِ أول محافظة لك!' +
         '</div>';
       return;
@@ -709,34 +923,38 @@
       const prop = state.properties[tid];
       const barColor = tile.group ? COLOR_GROUPS[tile.group].color : (tile.type === 'station' ? '#475569' : '#0f766e');
       const statusText = prop.mortgaged
-        ? 'مرهون للبنك'
+        ? 'مرهون للبنك ⚠️'
         : (prop.houses === 5 ? 'فندق سياحي 🏨' : (prop.houses > 0 ? ('منازل: ' + prop.houses + ' 🏠') : 'أرض فضاء'));
 
-      let btns = '<button class="btn btn-outline btn-xs" data-tile-jump="' + tid + '" type="button">📄 العقد</button>';
+      const baseRentInfo = tile.rent
+        ? ('الإيجار الحالي: ' + formatMoney(prop.houses > 0 ? tile.rent[prop.houses] : tile.rent[0]))
+        : ('السعر: ' + formatMoney(tile.price));
+
+      let btns = '<button class="btn btn-outline btn-sm" data-tile-jump="' + tid + '" type="button">📄 تفاصيل العقد</button>';
 
       if (tile.type === 'property' && isMyTurn && !prop.mortgaged && prop.houses < 5) {
-        btns += '<button class="btn btn-emerald btn-xs" data-build-tile="' + tid + '" type="button">+ بناء (' + tile.houseCost + ')</button>';
+        btns += '<button class="btn btn-emerald btn-sm" data-build-tile="' + tid + '" type="button">+ بناء (' + tile.houseCost + ')</button>';
       }
       if (tile.type === 'property' && prop.houses > 0) {
-        btns += '<button class="btn btn-danger-outline btn-xs" data-sell-tile="' + tid + '" type="button">- بيع مبنى</button>';
+        btns += '<button class="btn btn-danger-outline btn-sm" data-sell-tile="' + tid + '" type="button">- بيع مبنى (+' + Math.floor(tile.houseCost / 2) + ')</button>';
       }
       if (!prop.mortgaged && prop.houses === 0) {
         const mortVal = Math.floor(tile.price / 2);
-        btns += '<button class="btn btn-outline btn-xs" data-mort-tile="' + tid + '" type="button">رهن (+' + mortVal + ')</button>';
+        btns += '<button class="btn btn-outline btn-sm" data-mort-tile="' + tid + '" type="button">رهن (+' + mortVal + ')</button>';
       } else if (prop.mortgaged) {
         const unmortCost = Math.ceil((tile.price / 2) * 1.1);
-        btns += '<button class="btn btn-gold btn-xs" data-unmort-tile="' + tid + '" type="button">فك رهن (-' + unmortCost + ')</button>';
+        btns += '<button class="btn btn-gold btn-sm" data-unmort-tile="' + tid + '" type="button">فك رهن (-' + unmortCost + ')</button>';
       }
 
       return (
         '<div class="asset-item">' +
         '<div class="asset-bar" style="background:' + barColor + '"></div>' +
         '<div class="asset-content">' +
-        '<div class="asset-head">' +
+        '<div class="asset-head" data-tile-jump="' + tid + '">' +
         '<span>' + tile.icon + ' ' + escapeHtml(tile.name) + '</span>' +
-        '<span>' + statusText + '</span>' +
+        '<span style="color:#ffd166;font-size:0.82rem">' + statusText + '</span>' +
         '</div>' +
-        '<div class="asset-sub">' + escapeHtml(tile.subtitle || '') + '</div>' +
+        '<div class="asset-sub">' + escapeHtml(baseRentInfo) + (tile.subtitle ? ' • ' + escapeHtml(tile.subtitle) : '') + '</div>' +
         '<div class="asset-btns">' + btns + '</div>' +
         '</div>' +
         '</div>'
@@ -744,7 +962,7 @@
     }).join('');
   }
 
-  // ==================== Active Trades, Logs & Chat ====================
+  // ==================== Active Trades, Counter-Offers, Logs & Chat ====================
   function describeTradeSide(side) {
     const parts = [];
     if (side.cash > 0) parts.push(formatMoney(side.cash));
@@ -752,10 +970,10 @@
     if (Array.isArray(side.properties) && side.properties.length > 0) {
       side.properties.forEach(function (tid) {
         const t = BOARD_TILES[tid];
-        if (t) parts.push(t.name);
+        if (t) parts.push(t.icon + ' ' + t.name);
       });
     }
-    return parts.length > 0 ? parts.join(' + ') : 'لا شيء';
+    return parts.length > 0 ? parts.join(' + ') : 'بدون مقابل';
   }
 
   function renderActiveTrades(state) {
@@ -763,20 +981,44 @@
       return tr.toId === ui.myPlayerId || tr.fromId === ui.myPlayerId;
     });
 
-    // Sound & Toast alert on new incoming trade
+    // Sound & Toast alert on new incoming or modified trade
     myTrades.forEach(function (tr) {
       if (!ui.knownTradeIds.has(tr.id)) {
         ui.knownTradeIds.add(tr.id);
         if (tr.toId === ui.myPlayerId) {
           AudioFX.trade();
           const sender = state.players.find(function (p) { return p.id === tr.fromId; });
-          showToast('🤝 وصلك عرض مقايضة جديد من ' + (sender ? sender.name : 'لاعب') + '!', 'success');
+          const msgPrefix = tr.isCounter ? '✏️ عدّل ' : '🤝 أرسل ';
+          showToast(msgPrefix + (sender ? sender.name : 'لاعب') + ' عرض صفقة إليك!', 'success');
         }
       }
     });
 
-    const incomingCount = myTrades.filter(function (t) { return t.toId === ui.myPlayerId; }).length;
-    els.mobTradeBadge.classList.toggle('hidden', incomingCount === 0);
+    const incomingTrades = myTrades.filter(function (t) { return t.toId === ui.myPlayerId; });
+    els.mobTradeBadge.classList.toggle('hidden', incomingTrades.length === 0);
+
+    // Prominent on-screen banner for incoming trades (visible on both mobile & desktop)
+    if (els.incomingTradeBanner) {
+      if (incomingTrades.length > 0) {
+        const tr = incomingTrades[0];
+        const fromP = state.players.find(function (p) { return p.id === tr.fromId; });
+        els.incomingTradeBanner.classList.remove('hidden');
+        els.incomingTradeBanner.innerHTML =
+          '<div class="itb-info">' +
+          '<strong>' + (tr.isCounter ? '✏️ صفقة معدّلة من ' : '🤝 عرض صفقة من ') + escapeHtml(fromP ? fromP.name : 'لاعب') + ':</strong> ' +
+          'يعطيك (' + escapeHtml(describeTradeSide(tr.offer)) + ') مقابل (' + escapeHtml(describeTradeSide(tr.request)) + ')' +
+          (tr.note ? ' — <em>"' + escapeHtml(tr.note) + '"</em>' : '') +
+          '</div>' +
+          '<div class="itb-actions">' +
+          '<button class="btn btn-emerald btn-xs" data-accept-trade="' + tr.id + '" type="button">✅ موافقة</button>' +
+          '<button class="btn btn-purple btn-xs" data-counter-trade="' + tr.id + '" type="button">✏️ تعديل الصفقة</button>' +
+          '<button class="btn btn-danger-outline btn-xs" data-reject-trade="' + tr.id + '" type="button">✕ رفض</button>' +
+          '</div>';
+      } else {
+        els.incomingTradeBanner.classList.add('hidden');
+        els.incomingTradeBanner.innerHTML = '';
+      }
+    }
 
     if (myTrades.length === 0) {
       els.activeTradesBox.classList.add('hidden');
@@ -794,15 +1036,17 @@
         '<div class="trade-offer-card">' +
         '<div style="font-weight:800;color:#ffd166;margin-bottom:4px">' +
         (isIncoming
-          ? ('🤝 عرض وارد من ' + escapeHtml(fromP ? fromP.name : ''))
+          ? ((tr.isCounter ? '✏️ عرض معدّل من ' : '🤝 عرض وارد من ') + escapeHtml(fromP ? fromP.name : ''))
           : ('⏳ عرض مرسل إلى ' + escapeHtml(toP ? toP.name : ''))) +
         '</div>' +
         '<div><strong>يعرض:</strong> ' + escapeHtml(describeTradeSide(tr.offer)) + '</div>' +
         '<div><strong>يطلب:</strong> ' + escapeHtml(describeTradeSide(tr.request)) + '</div>' +
-        '<div style="display:flex;gap:6px;margin-top:8px">' +
+        (tr.note ? '<div style="color:#cbd5e1;margin-top:3px;font-style:italic">💬 "' + escapeHtml(tr.note) + '"</div>' : '') +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' +
         (isIncoming
-          ? '<button class="btn btn-emerald btn-xs" data-accept-trade="' + tr.id + '" type="button">✅ قبول الصفقة</button>' +
-          '<button class="btn btn-danger-outline btn-xs" data-reject-trade="' + tr.id + '" type="button">❌ رفض</button>'
+          ? '<button class="btn btn-emerald btn-xs" data-accept-trade="' + tr.id + '" type="button">✅ موافقة</button>' +
+          '<button class="btn btn-purple btn-xs" data-counter-trade="' + tr.id + '" type="button">✏️ تعديل الصفقة</button>' +
+          '<button class="btn btn-danger-outline btn-xs" data-reject-trade="' + tr.id + '" type="button">✕ رفض</button>'
           : '<button class="btn btn-danger-outline btn-xs" data-cancel-trade="' + tr.id + '" type="button">إلغاء العرض</button>') +
         '</div>' +
         '</div>'
@@ -811,12 +1055,11 @@
   }
 
   function renderLogsAndChat(state) {
-    // Event Logs
     if (state.logs && state.logs.length > 0) {
       const newest = state.logs[0];
       if (ui.lastLogId && newest.id !== ui.lastLogId) {
         if (newest.type === 'rent') AudioFX.rent();
-        else if (newest.type === 'jail') AudioFX.jail();
+        else if (newest.type === 'jail' || newest.type === 'bankrupt') AudioFX.jail();
       }
       ui.lastLogId = newest.id;
     }
@@ -825,7 +1068,6 @@
       return '<div class="log-entry ' + escapeHtml(lg.type) + '">' + escapeHtml(lg.text) + '</div>';
     }).join('');
 
-    // Chat
     const chatArr = state.chat || [];
     if (chatArr.length > ui.lastChatCount) {
       const added = chatArr.length - ui.lastChatCount;
@@ -860,7 +1102,7 @@
     els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
   }
 
-  // ==================== Property Deed Modal ====================
+  // ==================== Property Deed Modal (Enlarged & Mobile-Friendly) ====================
   function openTileModal(tileId) {
     const tile = BOARD_TILES[tileId];
     if (!tile) return;
@@ -890,17 +1132,18 @@
 
     let bodyHtml =
       '<div class="deed-header" style="background:' + headerBg + ';color:' + headerColor + '">' +
-      '<div style="font-size:0.78rem;opacity:0.9">' + escapeHtml(groupLabel) + '</div>' +
-      '<h3>' + tile.icon + ' ' + escapeHtml(tile.name) + '</h3>' +
-      (tile.subtitle ? '<div style="font-size:0.82rem;opacity:0.92">' + escapeHtml(tile.subtitle) + '</div>' : '') +
+      '<span class="deed-emblem">' + tile.icon + '</span>' +
+      '<div style="font-size:0.8rem;font-weight:800;opacity:0.92">' + escapeHtml(groupLabel) + '</div>' +
+      '<h3>' + escapeHtml(tile.name) + '</h3>' +
+      (tile.subtitle ? '<div style="font-size:0.86rem;opacity:0.95;margin-top:2px">' + escapeHtml(tile.subtitle) + '</div>' : '') +
       '</div>';
 
     if (isPurchasable(tile)) {
       bodyHtml +=
-        '<div style="display:flex;justify-content:space-between;background:rgba(255,255,255,0.06);padding:8px 12px;border-radius:9px;font-size:0.86rem;margin-bottom:8px">' +
+        '<div class="deed-owner-pill">' +
         '<span>سعر الشراء: <strong>' + formatMoney(tile.price) + '</strong></span>' +
         '<span>المالك: <strong style="color:' + (owner ? owner.color : '#94a3b8') + '">' +
-        (owner ? (owner.icon + ' ' + escapeHtml(owner.name)) : 'البنك (متاح)') +
+        (owner ? (owner.icon + ' ' + escapeHtml(owner.name)) : 'البنك (متاح للشراء)') +
         '</strong></span>' +
         '</div>';
 
@@ -909,15 +1152,15 @@
         bodyHtml +=
           '<table class="rent-table">' +
           '<tr class="' + (curH === 0 ? 'current-tier' : '') + '"><td>إيجار الأرض الفضاء</td><td>' + formatMoney(tile.rent[0]) + '</td></tr>' +
-          '<tr><td>عند امتلاك المجموعة كاملة (احتكار)</td><td>' + formatMoney(tile.rent[0] * 2) + '</td></tr>' +
+          '<tr><td>عند امتلاك المجموعة كاملة (احتكار ×2)</td><td>' + formatMoney(tile.rent[0] * 2) + '</td></tr>' +
           '<tr class="' + (curH === 1 ? 'current-tier' : '') + '"><td>مع منزل واحد 🏠</td><td>' + formatMoney(tile.rent[1]) + '</td></tr>' +
           '<tr class="' + (curH === 2 ? 'current-tier' : '') + '"><td>مع منزلين 🏠🏠</td><td>' + formatMoney(tile.rent[2]) + '</td></tr>' +
           '<tr class="' + (curH === 3 ? 'current-tier' : '') + '"><td>مع 3 منازل 🏠🏠🏠</td><td>' + formatMoney(tile.rent[3]) + '</td></tr>' +
           '<tr class="' + (curH === 4 ? 'current-tier' : '') + '"><td>مع 4 منازل 🏠🏠🏠🏠</td><td>' + formatMoney(tile.rent[4]) + '</td></tr>' +
           '<tr class="' + (curH === 5 ? 'current-tier' : '') + '"><td>مع فندق سياحي 🏨</td><td>' + formatMoney(tile.rent[5]) + '</td></tr>' +
           '</table>' +
-          '<div style="font-size:0.8rem;color:#cbd5e1;display:flex;justify-content:space-between">' +
-          '<span>تكلفة بناء المنزل/الفندق: <strong>' + formatMoney(tile.houseCost) + '</strong></span>' +
+          '<div style="font-size:0.84rem;color:#cbd5e1;display:flex;justify-content:space-between;padding:4px 2px">' +
+          '<span>تكلفة البناء: <strong>' + formatMoney(tile.houseCost) + '</strong></span>' +
           '<span>قيمة الرهن: <strong>' + formatMoney(Math.floor(tile.price / 2)) + '</strong></span>' +
           '</div>';
       } else if (tile.type === 'station') {
@@ -930,10 +1173,9 @@
           '</table>';
       } else if (tile.type === 'utility') {
         bodyHtml +=
-          '<p style="font-size:0.86rem;line-height:1.6;color:#e2e8f0;margin:10px 0">' + escapeHtml(tile.description) + '</p>';
+          '<p style="font-size:0.9rem;line-height:1.6;color:#e2e8f0;margin:10px 0">' + escapeHtml(tile.description) + '</p>';
       }
 
-      // Owner Management Controls inside Modal
       if (state && prop && prop.ownerId === ui.myPlayerId) {
         const isMyTurn = state.players[state.currentTurnIndex] && state.players[state.currentTurnIndex].id === ui.myPlayerId;
         bodyHtml += '<div class="deed-controls">';
@@ -962,10 +1204,17 @@
             '</button>';
         }
         bodyHtml += '</div>';
+      } else if (state && owner && owner.id !== ui.myPlayerId && !owner.bankrupt) {
+        bodyHtml +=
+          '<div class="deed-controls">' +
+          '<button class="btn btn-emerald full-width" data-trade-tile-owner="' + owner.id + '" data-trade-want-tile="' + tile.id + '" type="button">' +
+          '🤝 اطلب شراء "' + escapeHtml(tile.name) + '" في صفقة مع ' + escapeHtml(owner.name) +
+          '</button>' +
+          '</div>';
       }
     } else {
       bodyHtml +=
-        '<p style="font-size:0.9rem;line-height:1.6;color:#e2e8f0;padding:8px 0">' +
+        '<p style="font-size:0.95rem;line-height:1.65;color:#e2e8f0;padding:8px 0">' +
         escapeHtml(tile.description || tile.subtitle || '') +
         '</p>';
     }
@@ -974,10 +1223,14 @@
     els.tileModal.classList.remove('hidden');
   }
 
-  // ==================== Trade Modal ====================
-  function openTradeModal(preselectedTargetId) {
+  // ==================== Trade Modal (Visual Cards + Quick Cash + Counter-Offers) ====================
+  function openTradeModal(optionsOrTargetId) {
     const state = ui.state;
     if (!state || state.status !== 'PLAYING') return;
+
+    const opts = typeof optionsOrTargetId === 'string'
+      ? { targetId: optionsOrTargetId }
+      : (optionsOrTargetId || {});
 
     const others = state.players.filter(function (p) {
       return p.id !== ui.myPlayerId && !p.bankrupt;
@@ -987,22 +1240,53 @@
       return;
     }
 
+    const counterTrade = opts.counterTrade || null;
+    ui.editingCounterTradeId = counterTrade ? counterTrade.id : null;
+
+    const preTargetId = counterTrade ? counterTrade.fromId : opts.targetId;
     els.tradeTargetSelect.innerHTML = others.map(function (p) {
-      const sel = p.id === preselectedTargetId ? 'selected' : '';
-      return '<option value="' + p.id + '" ' + sel + '>' + p.icon + ' ' + escapeHtml(p.name) + ' (' + formatMoney(p.cash) + ')</option>';
+      const sel = p.id === preTargetId ? 'selected' : '';
+      return '<option value="' + p.id + '" ' + sel + '>' + p.icon + ' ' + escapeHtml(p.name) + ' (متاح: ' + formatMoney(Math.max(0, p.cash)) + ')</option>';
     }).join('');
 
-    els.tradeMyCash.value = '0';
-    els.tradeMyCards.value = '0';
-    els.tradeTheirCash.value = '0';
-    els.tradeTheirCards.value = '0';
+    if (counterTrade) {
+      const sender = state.players.find(function (p) { return p.id === counterTrade.fromId; });
+      els.tradeModalTitle.textContent = '✏️ تعديل شروط الصفقة وإرسال عرض مضاد';
+      els.tradeCounterHint.classList.remove('hidden');
+      els.tradeCounterHint.textContent =
+        'تقوم الآن بتعديل الصفقة الواردة من ' + (sender ? sender.name : 'اللاعب') +
+        ' — غيّر المبالغ أو أضف/أزل المحافظات ثم أرسل التعديل إليه مباشرة!';
+      els.submitTradeBtn.textContent = '✏️ إرسال الصفقة المعدّلة الآن';
 
-    populateTradePropertyChecklists();
+      // Swap sides so "ما تقدمه أنت" starts with what they requested from me, and "ما تطلبه" starts with what they offered me
+      els.tradeMyCash.value = String(counterTrade.request.cash || 0);
+      els.tradeMyCards.value = String(counterTrade.request.jailCards || 0);
+      els.tradeTheirCash.value = String(counterTrade.offer.cash || 0);
+      els.tradeTheirCards.value = String(counterTrade.offer.jailCards || 0);
+      if (els.tradeNoteInput) els.tradeNoteInput.value = '';
+
+      populateTradePropertyChecklists(counterTrade.request.properties || [], counterTrade.offer.properties || []);
+    } else {
+      els.tradeModalTitle.textContent = '🤝 عرض مقايضة وتبادل محافظات';
+      els.tradeCounterHint.classList.add('hidden');
+      els.submitTradeBtn.textContent = '🤝 إرسال عرض المقايضة الآن';
+
+      els.tradeMyCash.value = '0';
+      els.tradeMyCards.value = '0';
+      els.tradeTheirCash.value = '0';
+      els.tradeTheirCards.value = '0';
+      if (els.tradeNoteInput) els.tradeNoteInput.value = '';
+
+      const preWantProps = opts.wantTileId !== undefined ? [Number(opts.wantTileId)] : [];
+      populateTradePropertyChecklists([], preWantProps);
+    }
+
     els.tradeModal.classList.remove('hidden');
   }
 
-  function renderChecklistForOwner(ownerId, inputName) {
+  function renderChecklistForOwner(ownerId, inputName, selectedIds) {
     const state = ui.state;
+    const selectedSet = new Set((selectedIds || []).map(Number));
     const owned = Object.keys(state.properties)
       .map(Number)
       .filter(function (tid) {
@@ -1011,62 +1295,88 @@
       });
 
     if (owned.length === 0) {
-      return '<div style="font-size:0.76rem;color:#94a3b8;padding:6px">لا توجد عقارات قابلة للمقايضة (بدون مبانٍ).</div>';
+      return '<div style="font-size:0.8rem;color:#94a3b8;padding:8px;grid-column:1/-1">لا توجد محافظات متاحة للمقايضة (بدون مبانٍ).</div>';
     }
 
     return owned.map(function (tid) {
       const tile = BOARD_TILES[tid];
       const prop = state.properties[tid];
-      const dotColor = tile.group ? COLOR_GROUPS[tile.group].color : '#38bdf8';
+      const barColor = tile.group ? COLOR_GROUPS[tile.group].color : (tile.type === 'station' ? '#64748b' : '#14b8a6');
+      const isChecked = selectedSet.has(tid);
       return (
-        '<label class="trade-prop-row">' +
-        '<input type="checkbox" name="' + inputName + '" value="' + tid + '" />' +
-        '<span class="color-pill" style="background:' + dotColor + '"></span>' +
-        '<span>' + escapeHtml(tile.name) + (prop.mortgaged ? ' (مرهون)' : '') + '</span>' +
+        '<label class="trade-prop-card' + (isChecked ? ' checked' : '') + '">' +
+        '<input type="checkbox" name="' + inputName + '" value="' + tid + '" ' + (isChecked ? 'checked' : '') + ' />' +
+        '<span class="tpc-bar" style="background:' + barColor + '"></span>' +
+        '<span class="tpc-title">' + tile.icon + ' ' + escapeHtml(tile.name) + '</span>' +
+        '<span class="tpc-price">' + formatMoney(tile.price) + (prop.mortgaged ? ' • مرهون' : '') + '</span>' +
         '</label>'
       );
     }).join('');
   }
 
-  function populateTradePropertyChecklists() {
+  function updateTradeCashHints() {
     if (!ui.state) return;
-    const targetId = els.tradeTargetSelect.value;
-    els.tradeMyProps.innerHTML = renderChecklistForOwner(ui.myPlayerId, 'myTradeProp');
-    els.tradeTheirProps.innerHTML = renderChecklistForOwner(targetId, 'theirTradeProp');
+    const me = ui.state.players.find(function (p) { return p.id === ui.myPlayerId; });
+    const target = ui.state.players.find(function (p) { return p.id === els.tradeTargetSelect.value; });
+    if (els.tradeMyMaxCashHint && me) {
+      els.tradeMyMaxCashHint.textContent = 'متاح لديك: ' + formatMoney(Math.max(0, me.cash));
+    }
+    if (els.tradeTheirMaxCashHint && target) {
+      els.tradeTheirMaxCashHint.textContent = 'متاح لديه: ' + formatMoney(Math.max(0, target.cash));
+    }
   }
 
-  // ==================== Winner Screen ====================
+  function populateTradePropertyChecklists(myPreselected, theirPreselected) {
+    if (!ui.state) return;
+    const targetId = els.tradeTargetSelect.value;
+    els.tradeMyProps.innerHTML = renderChecklistForOwner(ui.myPlayerId, 'myTradeProp', myPreselected);
+    els.tradeTheirProps.innerHTML = renderChecklistForOwner(targetId, 'theirTradeProp', theirPreselected);
+    updateTradeCashHints();
+  }
+
+  // ==================== Winner & Standings Screen ====================
   function renderWinnerModalIfFinished(state) {
     if (state.status !== 'FINISHED' || !state.winnerId) {
       els.winnerModal.classList.add('hidden');
       return;
     }
     const winner = state.players.find(function (p) { return p.id === state.winnerId; });
-    if (els.winnerModal.classList.contains('hidden')) {
-      AudioFX.win();
-    }
+    const wasHidden = els.winnerModal.classList.contains('hidden');
     els.winnerTitle.textContent = winner
       ? ('🎉 الفائز: ' + winner.icon + ' ' + winner.name + '!')
       : 'انتهت المباراة!';
-    els.winnerSubtitle.textContent = 'سيطر على محافظات مصر وحقق لقب إمبراطور بنك الحظ عن جدارة!';
+    els.winnerSubtitle.textContent = state.finishReason === 'WEALTH'
+      ? 'حُسمت المباراة بأعلى صافي ثروة وعقارات في محافظات مصر!'
+      : 'صمد للنهاية بعد إفلاس وخسارة جميع المنافسين وحقق لقب إمبراطور بنك الحظ!';
 
     const sorted = state.players.slice().sort(function (a, b) {
+      if (a.bankrupt !== b.bankrupt) return a.bankrupt ? 1 : -1;
       return b.netWorth - a.netWorth;
     });
     els.winnerStandings.innerHTML = sorted.map(function (p, i) {
+      const isWin = p.id === state.winnerId;
       return (
-        '<div class="lobby-seat">' +
+        '<div class="lobby-seat" style="' + (isWin ? 'border-color:#ffd166;background:rgba(245,185,66,0.14)' : '') + '">' +
         '<div class="seat-left">' +
-        '<strong>#' + (i + 1) + '</strong>' +
+        '<strong>' + (isWin ? '🏆 #1' : ('#' + (i + 1))) + '</strong>' +
         '<div class="seat-avatar" style="background:' + p.color + '">' + p.icon + '</div>' +
+        '<div class="seat-meta">' +
         '<strong>' + escapeHtml(p.name) + '</strong>' +
+        '<small>' + (isWin ? 'فائز بالمركز الأول' : (p.bankrupt ? 'خسر بإعلان الإفلاس' : 'نشط')) + '</small>' +
         '</div>' +
-        '<strong style="color:#ffd166">' + (p.bankrupt ? 'مفلس' : formatMoney(p.netWorth)) + '</strong>' +
+        '</div>' +
+        '<strong style="color:' + (p.bankrupt ? '#f87171' : '#ffd166') + '">' +
+        (p.bankrupt ? 'خاسر 🏳️' : formatSignedCash(p.netWorth)) +
+        '</strong>' +
         '</div>'
       );
     }).join('');
 
     els.winnerModal.classList.remove('hidden');
+    if (wasHidden) {
+      AudioFX.win();
+      if (Ads) Ads.refresh(els.winnerModal);
+    }
   }
 
   // ==================== Master State Receiver ====================
@@ -1078,12 +1388,27 @@
     els.headerRoomCode.textContent = state.code;
 
     if (state.status === 'LOBBY') {
+      ui.cashInitialized = false;
       setScreen('lobby');
       renderLobby(state);
       return;
     }
 
     setScreen('game');
+
+    // Alert when a player loses / is eliminated at end of turn
+    if (state.lastEliminated && state.lastEliminated.timestamp !== ui.lastEliminatedTs) {
+      const wasInit = ui.lastEliminatedTs !== 0;
+      ui.lastEliminatedTs = state.lastEliminated.timestamp;
+      if (wasInit) {
+        const elim = state.lastEliminated;
+        showToast(
+          '💥 خسر اللاعب "' + elim.playerName + '" وأُعلن إفلاسه' +
+          (elim.creditorName ? (' لصالح ' + elim.creditorName) : '') + '!',
+          'error'
+        );
+      }
+    }
 
     const newTurnPlayer = state.players[state.currentTurnIndex];
     if (
@@ -1105,6 +1430,9 @@
     renderLogsAndChat(state);
     renderWinnerModalIfFinished(state);
 
+    // Trigger green (+) / red (-) flying cash animations after DOM cash elements are rendered
+    trackAndAnimateCashChanges(state);
+
     // Refresh open deed modal if open
     if (!els.tileModal.classList.contains('hidden') && ui.openTileModalId !== null) {
       openTileModal(ui.openTileModalId);
@@ -1112,11 +1440,30 @@
   }
 
   function dispatchGameAction(payload) {
+    const isCriticalTurnAction =
+      payload &&
+      (payload.type === 'ROLL_DICE' || payload.type === 'BUY_PROPERTY' || payload.type === 'SKIP_PURCHASE' || payload.type === 'END_TURN');
+
+    if (isCriticalTurnAction && ui.actionInFlight) {
+      return Promise.resolve({ ok: false });
+    }
+    if (isCriticalTurnAction) {
+      ui.actionInFlight = true;
+    }
+
     return Network.sendAction(payload).then(function (res) {
-      if (res && !res.ok && res.error) {
+      if (isCriticalTurnAction) {
+        ui.actionInFlight = false;
+      }
+      if (res && !res.ok && res.error && !res.needsLossConfirm) {
         showToast(res.error, 'error');
       }
       return res;
+    }).catch(function () {
+      if (isCriticalTurnAction) {
+        ui.actionInFlight = false;
+      }
+      return { ok: false };
     });
   }
 
@@ -1133,9 +1480,11 @@
     if (view === 'players') {
       els.drawerPlayers.classList.add('mobile-open');
       activateRightSubtab('players');
+      if (Ads) Ads.refresh(els.drawerPlayers);
     } else if (view === 'assets') {
       els.drawerPlayers.classList.add('mobile-open');
       activateRightSubtab('assets');
+      if (Ads) Ads.refresh(els.drawerPlayers);
     } else if (view === 'social') {
       els.drawerSocial.classList.add('mobile-open');
       activateLeftSubtab('chat');
@@ -1178,16 +1527,21 @@
     }
   }
 
+  function handleHostFinishByWealth() {
+    if (!ui.state || ui.state.hostId !== ui.myPlayerId) return;
+    if (window.confirm('هل تريد حسم المباراة الآن وإعلان الفائز صاحب أعلى ثروة إجمالية؟')) {
+      dispatchGameAction({ type: 'FINISH_BY_WEALTH' });
+    }
+  }
+
   // ==================== Event Listeners Binding ====================
   function bindEvents() {
-    // Sound Toggle
     els.soundToggleBtn.textContent = AudioFX.isMuted() ? '🔇' : '🔊';
     els.soundToggleBtn.addEventListener('click', function () {
       const m = AudioFX.toggleMute();
       els.soundToggleBtn.textContent = m ? '🔇' : '🔊';
     });
 
-    // Avatar Selection
     els.avatarPickerGrid.addEventListener('click', function (ev) {
       const card = ev.target.closest('[data-avatar-id]');
       if (!card) return;
@@ -1220,6 +1574,7 @@
         }
         ui.myPlayerId = res.playerId;
         ui.roomCode = res.roomCode;
+        ui.cashInitialized = false;
         saveSession(res.roomCode, res.playerId, res.sessionToken);
         window.history.replaceState({}, '', '?room=' + encodeURIComponent(res.roomCode));
         handleRoomState(res.state);
@@ -1260,6 +1615,7 @@
         }
         ui.myPlayerId = res.playerId;
         ui.roomCode = res.roomCode;
+        ui.cashInitialized = false;
         saveSession(res.roomCode, res.playerId, res.sessionToken);
         window.history.replaceState({}, '', '?room=' + encodeURIComponent(res.roomCode));
         handleRoomState(res.state);
@@ -1267,7 +1623,6 @@
       });
     });
 
-    // Copy Invite Links & WhatsApp Share
     function handleCopyInvite() {
       if (!ui.roomCode) return;
       const url = buildInviteUrl(ui.roomCode);
@@ -1287,7 +1642,6 @@
       window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank', 'noopener');
     });
 
-    // Leave Room
     function exitToHome() {
       clearSession(ui.roomCode);
       Network.leaveRoom().then(function () {
@@ -1295,6 +1649,9 @@
         ui.roomCode = null;
         ui.myPlayerId = null;
         ui.displayedPositions = {};
+        ui.prevPlayerCash = {};
+        ui.cashInitialized = false;
+        ui.isAnimatingMove = false;
         els.winnerModal.classList.add('hidden');
         window.history.replaceState({}, '', window.location.pathname);
         setScreen('landing');
@@ -1338,6 +1695,13 @@
       dispatchGameAction({ type: 'START_GAME' });
     });
 
+    if (els.finishByWealthBtn) {
+      els.finishByWealthBtn.addEventListener('click', handleHostFinishByWealth);
+    }
+    if (els.hostFinishGameSideBtn) {
+      els.hostFinishGameSideBtn.addEventListener('click', handleHostFinishByWealth);
+    }
+
     // Board Zoom Toggle (Mobile)
     els.boardZoomToggleBtn.addEventListener('click', function () {
       ui.boardZoomed = !ui.boardZoomed;
@@ -1346,7 +1710,41 @@
       setTimeout(function () { layoutAllTokensStatic(ui.state); }, 60);
     });
 
-    // Delegated Actions in Side Panels & Modals
+    // Trade Modal Quick Cash Chips & Visual Property Card Toggles
+    els.tradeModal.addEventListener('change', function (ev) {
+      if (ev.target && ev.target.type === 'checkbox') {
+        const card = ev.target.closest('.trade-prop-card');
+        if (card) card.classList.toggle('checked', ev.target.checked);
+      }
+    });
+
+    els.tradeModal.addEventListener('click', function (ev) {
+      const chip = ev.target.closest('.cash-chip');
+      if (!chip) return;
+      const group = chip.closest('[data-cash-target]');
+      if (!group) return;
+      const inputEl = document.getElementById(group.dataset.cashTarget);
+      if (!inputEl || !ui.state) return;
+
+      AudioFX.click();
+      if (chip.dataset.cashReset) {
+        inputEl.value = '0';
+        return;
+      }
+
+      const ownerId = group.dataset.cashTarget === 'tradeMyCash'
+        ? ui.myPlayerId
+        : els.tradeTargetSelect.value;
+      const ownerObj = ui.state.players.find(function (p) { return p.id === ownerId; });
+      const maxAllowed = ownerObj ? Math.max(0, ownerObj.cash) : 999999;
+
+      const curVal = Number(inputEl.value) || 0;
+      const delta = Number(chip.dataset.cashDelta) || 0;
+      const nextVal = Math.max(0, Math.min(maxAllowed, curVal + delta));
+      inputEl.value = String(nextVal);
+    });
+
+    // Delegated Actions in Side Panels, Banners & Modals
     document.body.addEventListener('click', function (ev) {
       const closeModalBtn = ev.target.closest('[data-close-modal]');
       if (closeModalBtn) {
@@ -1364,8 +1762,18 @@
         return;
       }
 
+      const tradeFromDeed = ev.target.closest('[data-trade-tile-owner]');
+      if (tradeFromDeed) {
+        els.tileModal.classList.add('hidden');
+        openTradeModal({
+          targetId: tradeFromDeed.dataset.tradeTileOwner,
+          wantTileId: Number(tradeFromDeed.dataset.tradeWantTile)
+        });
+        return;
+      }
+
       const jumpTile = ev.target.closest('[data-tile-jump]');
-      if (jumpTile) {
+      if (jumpTile && !ev.target.closest('button:not([data-tile-jump])')) {
         openTileModal(Number(jumpTile.dataset.tileJump));
         return;
       }
@@ -1401,6 +1809,18 @@
       const tradeTargetBtn = ev.target.closest('[data-trade-target]');
       if (tradeTargetBtn) {
         openTradeModal(tradeTargetBtn.dataset.tradeTarget);
+        return;
+      }
+
+      const counterTrBtn = ev.target.closest('[data-counter-trade]');
+      if (counterTrBtn && ui.state) {
+        const tradeObj = (ui.state.trades || []).find(function (t) {
+          return t.id === counterTrBtn.dataset.counterTrade;
+        });
+        if (tradeObj) {
+          AudioFX.click();
+          openTradeModal({ counterTrade: tradeObj });
+        }
         return;
       }
 
@@ -1442,16 +1862,26 @@
 
     // Trade Modal Submit
     els.openTradeFromAssetsBtn.addEventListener('click', function () { openTradeModal(); });
-    els.tradeTargetSelect.addEventListener('change', populateTradePropertyChecklists);
+    els.tradeTargetSelect.addEventListener('change', function () {
+      ui.editingCounterTradeId = null;
+      els.tradeCounterHint.classList.add('hidden');
+      els.tradeModalTitle.textContent = '🤝 عرض مقايضة وتبادل محافظات';
+      els.submitTradeBtn.textContent = '🤝 إرسال عرض المقايضة الآن';
+      populateTradePropertyChecklists([], []);
+    });
 
     els.submitTradeBtn.addEventListener('click', function () {
       const toId = els.tradeTargetSelect.value;
       const myProps = Array.from(els.tradeMyProps.querySelectorAll('input:checked')).map(function (i) { return Number(i.value); });
       const theirProps = Array.from(els.tradeTheirProps.querySelectorAll('input:checked')).map(function (i) { return Number(i.value); });
+      const wasCounter = Boolean(ui.editingCounterTradeId);
 
       dispatchGameAction({
         type: 'PROPOSE_TRADE',
         toId: toId,
+        counterToTradeId: ui.editingCounterTradeId,
+        isCounter: wasCounter,
+        note: els.tradeNoteInput ? els.tradeNoteInput.value.trim() : '',
         offer: {
           cash: Number(els.tradeMyCash.value) || 0,
           jailCards: Number(els.tradeMyCards.value) || 0,
@@ -1464,8 +1894,9 @@
         }
       }).then(function (res) {
         if (res && res.ok) {
+          ui.editingCounterTradeId = null;
           els.tradeModal.classList.add('hidden');
-          showToast('🤝 تم إرسال عرض المقايضة بنجاح!', 'success');
+          showToast(wasCounter ? '✏️ تم إرسال الصفقة المعدّلة بنجاح!' : '🤝 تم إرسال عرض المقايضة بنجاح!', 'success');
         }
       });
     });
@@ -1487,6 +1918,7 @@
 
     window.addEventListener('resize', function () {
       layoutAllTokensStatic(ui.state);
+      if (Ads) Ads.refresh();
     });
   }
 
@@ -1512,7 +1944,6 @@
       }
     });
 
-    // Auto-reconnect if player already had a session in this tab
     const existingSession = loadSession(roomParam);
     if (existingSession && existingSession.sessionToken) {
       setTimeout(function () {
@@ -1540,6 +1971,7 @@
     renderAvatarPicker();
     buildBoardDOM();
     bindEvents();
+    if (Ads) Ads.refresh();
 
     Network.onConnectionChange(function (info) {
       const isOnlineMode = info.mode === 'socket' || info.mode === 'mqtt_cloud' || info.mode === 'cloud_api';
@@ -1554,11 +1986,11 @@
           : 'انقطع الاتصال...';
       } else if (info.mode === 'mqtt_cloud') {
         els.connectionText.textContent = info.connected
-          ? 'أونلاين عالمي v3.1'
+          ? 'أونلاين عالمي v4.0'
           : 'إعادة الاتصال...';
       } else if (info.mode === 'cloud_api') {
         els.connectionText.textContent = info.connected
-          ? 'أونلاين سحابي v3.1'
+          ? 'أونلاين سحابي v4.0'
           : 'إعادة الاتصال...';
       } else {
         els.connectionText.textContent = 'وضع محلي (بدون إنترنت)';

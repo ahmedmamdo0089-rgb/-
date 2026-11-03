@@ -9,7 +9,7 @@
     'wss://broker.hivemq.com:8884/mqtt'
   ];
 
-  const TOPIC_PREFIX = 'beh-egypt-v31/room/';
+  const TOPIC_PREFIX = 'beh-egypt-v40/room/';
 
   function randomToken(prefix) {
     return (prefix || 'tok') + '_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-5);
@@ -361,7 +361,8 @@
       case 'UNMORTGAGE': return Engine.unmortgageProperty(room, actorId, Number(actionPayload.tileId));
       case 'SETTLE_DEBT': return Engine.settleDebt(room, actorId);
       case 'BANKRUPT': return Engine.declareBankruptcy(room, actorId, { targetId: actionPayload.targetId });
-      case 'END_TURN': return Engine.endTurn(room, actorId);
+      case 'END_TURN': return Engine.endTurn(room, actorId, actionPayload);
+      case 'FINISH_BY_WEALTH': return Engine.finishGameByWealth(room, actorId);
       case 'PROPOSE_TRADE': return Engine.proposeTrade(room, actorId, actionPayload);
       case 'RESPOND_TRADE': return Engine.respondTrade(room, actorId, actionPayload);
       case 'CANCEL_TRADE': return Engine.cancelTrade(room, actorId, actionPayload.tradeId);

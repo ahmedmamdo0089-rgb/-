@@ -106,7 +106,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=3.1" />
+  <link rel="stylesheet" href="css/styles.css?v=4.1" />
 </head>
 <body>
   <!-- شريط علوي ثابت -->
@@ -227,9 +227,12 @@
       <div class="features-strip">
         <div class="feat-chip">🗺️ 22 محافظة ومدينة مصرية</div>
         <div class="feat-chip">🎁 بطاقات فرصة ومحكمة مصرية</div>
-        <div class="feat-chip">🤝 مقايضة وتجارة حرة</div>
-        <div class="feat-chip">📱 متوافقة مع الهواتف والكمبيوتر</div>
+        <div class="feat-chip">🤝 مقايضة مرنة وتعديل صفقات</div>
+        <div class="feat-chip">📱 مصممة خصيصاً للهاتف والكمبيوتر</div>
       </div>
+
+      <!-- مساحة إعلانية متجاوبة لشاشة البداية -->
+      <div class="ad-slot-container ad-slot-landing" data-ad-slot-key="landing_banner" aria-label="إعلان"></div>
 
       <!-- قسم تعريفي دلالي لتحسين ظهور اللعبة في محركات البحث (SEO) -->
       <section class="seo-info-section" aria-label="عن لعبة بنك الحظ المصري أونلاين">
@@ -288,10 +291,11 @@
           <div class="setting-row">
             <label for="startingCashSelect">رصيد البداية لكل لاعب</label>
             <select id="startingCashSelect" class="select-input">
-              <option value="10000">10,000 ج.م (سريعة وتنافسية)</option>
-              <option value="15000" selected>15,000 ج.م (القياس الرسمي)</option>
-              <option value="20000">20,000 ج.م (استثمارية)</option>
-              <option value="25000">25,000 ج.م (ثروة كبرى)</option>
+              <option value="6000">6,000 ج.م (حماسية وتحدي مديونيات سريع 🔥)</option>
+              <option value="8000" selected>8,000 ج.م (الوضع التنافسي المتوازن ⭐)</option>
+              <option value="10000">10,000 ج.م (متوسطة)</option>
+              <option value="12000">12,000 ج.م (موسعة)</option>
+              <option value="15000">15,000 ج.م (كلاسيكية طويلة)</option>
             </select>
           </div>
 
@@ -301,7 +305,8 @@
           </label>
 
           <div class="lobby-rules-summary">
-            <div>💵 مكافأة المرور بالبداية: <strong>2,000 ج.م</strong></div>
+            <div>💵 مكافأة المرور بالبداية: <strong>1,000 ج.م</strong></div>
+            <div>📉 نظام المديونية: <strong>ينزل الرصيد للسالب مع مهلة لنهاية الدور قبل الخسارة</strong></div>
             <div>🏆 أغلى المحافظات: <strong>القاهرة (4,000) والإسكندرية (3,500)</strong></div>
             <div>👥 العدد المسموح: <strong>من 2 إلى 6 لاعبين</strong></div>
           </div>
@@ -312,6 +317,9 @@
           <p id="lobbyWaitHint" class="lobby-hint"></p>
         </div>
       </div>
+
+      <!-- مساحة إعلانية متجاوبة في غرفة الانتظار -->
+      <div class="ad-slot-container ad-slot-lobby" data-ad-slot-key="lobby_banner" aria-label="إعلان"></div>
     </div>
   </section>
 
@@ -321,16 +329,24 @@
     <div class="mobile-hud-bar">
       <div class="mobile-me-info">
         <span id="mobileMyAvatar" class="avatar-dot">👑</span>
-        <div>
+        <div class="mobile-me-texts">
           <div id="mobileMyName" class="mobile-me-name">اللاعب</div>
-          <div id="mobileMyCash" class="mobile-me-cash">15,000 ج.م</div>
+          <div id="mobileMyCash" class="mobile-me-cash cash-anchor">8,000 ج.م</div>
         </div>
       </div>
       <div id="mobileTurnBadge" class="mobile-turn-pill">الدور الحالي</div>
-      <button id="boardZoomToggleBtn" class="btn btn-outline btn-xs" type="button" title="تكبير أو احتواء الخريطة">
-        🔍 تكبير
-      </button>
+      <div class="mobile-hud-actions">
+        <button id="finishByWealthBtn" class="btn btn-gold-outline btn-xs hidden" type="button" title="إنهاء المباراة وتحديد الفائز بأعلى ثروة (للمضيف)">
+          🏁 حسم الفائز
+        </button>
+        <button id="boardZoomToggleBtn" class="btn btn-outline btn-xs" type="button" title="تكبير أو احتواء الخريطة">
+          🔍 تكبير
+        </button>
+      </div>
     </div>
+
+    <!-- شريط تنبيه فوري للصفقات الواردة والمعدّلة (يظهر مباشرة على الموبايل والكمبيوتر) -->
+    <div id="incomingTradeBanner" class="incoming-trade-banner hidden"></div>
 
     <div class="game-layout">
       <!-- اللوحة اليمنى: اللاعبون وأملاكي -->
@@ -354,9 +370,15 @@
             <button id="openTradeFromAssetsBtn" class="btn btn-emerald btn-sm full-width" type="button">
               🤝 فتح نافذة المقايضة مع اللاعبين
             </button>
+            <button id="hostFinishGameSideBtn" class="btn btn-gold-outline btn-sm full-width hidden" type="button" style="margin-top:6px;">
+              🏁 حسم المباراة وإعلان الفائز بالثروة
+            </button>
           </div>
           <div id="myAssetsList" class="my-assets-list"></div>
         </div>
+
+        <!-- مساحة إعلانية جانبية للكمبيوتر والتابلت -->
+        <div class="ad-slot-container ad-slot-sidebar" data-ad-slot-key="sidebar_box" aria-label="إعلان"></div>
       </aside>
 
       <!-- المنتصف: خريطة بنك الحظ المصري 11×11 -->
@@ -494,39 +516,65 @@
     </div>
   </div>
 
-  <!-- نافذة المقايضة بين اللاعبين -->
+  <!-- نافذة المقايضة بين اللاعبين (مع دعم تعديل الصفقات والأزرار السريعة) -->
   <div id="tradeModal" class="modal-backdrop hidden">
     <div class="modal-card trade-modal-card">
       <div class="modal-header">
-        <h3>🤝 عرض مقايضة وتبادل محافظات</h3>
+        <h3 id="tradeModalTitle">🤝 عرض مقايضة وتبادل محافظات</h3>
         <button class="modal-close" data-close-modal="tradeModal" type="button">✕</button>
       </div>
       <div class="trade-modal-body">
+        <div id="tradeCounterHint" class="trade-counter-hint hidden"></div>
+
         <div class="form-section">
           <label class="field-label" for="tradeTargetSelect">اختر اللاعب المراد المقايضة معه:</label>
           <select id="tradeTargetSelect" class="select-input"></select>
         </div>
 
         <div class="trade-columns">
-          <div class="trade-col">
-            <h4>📤 ما تقدمه أنت</h4>
-            <label class="small-label" for="tradeMyCash">مبلغ مالي (ج.م)</label>
-            <input id="tradeMyCash" class="text-input" type="number" min="0" step="50" value="0" />
+          <div class="trade-col trade-col-give">
+            <div class="trade-col-head">
+              <h4>📤 ما تقدمه أنت</h4>
+              <span id="tradeMyMaxCashHint" class="trade-cash-hint"></span>
+            </div>
+            <label class="small-label" for="tradeMyCash">مبلغ مالي تقدمه (ج.م)</label>
+            <input id="tradeMyCash" class="text-input trade-cash-input" type="number" min="0" step="50" value="0" />
+            <div class="quick-cash-chips" data-cash-target="tradeMyCash">
+              <button type="button" class="cash-chip" data-cash-delta="100">+100</button>
+              <button type="button" class="cash-chip" data-cash-delta="500">+500</button>
+              <button type="button" class="cash-chip" data-cash-delta="1000">+1,000</button>
+              <button type="button" class="cash-chip minus" data-cash-delta="-100">-100</button>
+              <button type="button" class="cash-chip reset" data-cash-reset="1">تصفير</button>
+            </div>
             <label class="small-label" for="tradeMyCards">بطاقات خروج من السجن</label>
             <input id="tradeMyCards" class="text-input" type="number" min="0" max="4" value="0" />
-            <div class="small-label">المحافظات والمرافق المعروضة:</div>
+            <div class="small-label">اضغط على المحافظات التي تريد تقديمها:</div>
             <div id="tradeMyProps" class="trade-props-checklist"></div>
           </div>
 
-          <div class="trade-col">
-            <h4>📥 ما تطلبه بالمقابل</h4>
-            <label class="small-label" for="tradeTheirCash">مبلغ مالي (ج.م)</label>
-            <input id="tradeTheirCash" class="text-input" type="number" min="0" step="50" value="0" />
+          <div class="trade-col trade-col-ask">
+            <div class="trade-col-head">
+              <h4>📥 ما تطلبه بالمقابل</h4>
+              <span id="tradeTheirMaxCashHint" class="trade-cash-hint"></span>
+            </div>
+            <label class="small-label" for="tradeTheirCash">مبلغ مالي تطلبه (ج.م)</label>
+            <input id="tradeTheirCash" class="text-input trade-cash-input" type="number" min="0" step="50" value="0" />
+            <div class="quick-cash-chips" data-cash-target="tradeTheirCash">
+              <button type="button" class="cash-chip" data-cash-delta="100">+100</button>
+              <button type="button" class="cash-chip" data-cash-delta="500">+500</button>
+              <button type="button" class="cash-chip" data-cash-delta="1000">+1,000</button>
+              <button type="button" class="cash-chip minus" data-cash-delta="-100">-100</button>
+              <button type="button" class="cash-chip reset" data-cash-reset="1">تصفير</button>
+            </div>
             <label class="small-label" for="tradeTheirCards">بطاقات خروج من السجن</label>
             <input id="tradeTheirCards" class="text-input" type="number" min="0" max="4" value="0" />
-            <div class="small-label">المحافظات والمرافق المطلوبة:</div>
+            <div class="small-label">اضغط على المحافظات المطلوبة من الطرف الآخر:</div>
             <div id="tradeTheirProps" class="trade-props-checklist"></div>
           </div>
+        </div>
+
+        <div class="form-section trade-note-row">
+          <input id="tradeNoteInput" class="text-input" type="text" maxlength="80" placeholder="ملاحظة سريعة مع العرض (اختياري — مثال: خد أسوان وهات الأقصر والفرق كاش)" />
         </div>
 
         <div class="modal-footer">
@@ -538,13 +586,15 @@
     </div>
   </div>
 
-  <!-- نافذة إعلان الفائز بنهاية المباراة -->
+  <!-- نافذة إعلان الفائز والخاسرين بنهاية المباراة -->
   <div id="winnerModal" class="modal-backdrop hidden">
     <div class="modal-card winner-modal-card">
       <div class="winner-crown">🏆👑</div>
       <h2 id="winnerTitle">إمبراطور بنك الحظ المصري!</h2>
       <p id="winnerSubtitle"></p>
       <div id="winnerStandings" class="winner-standings"></div>
+      <!-- مساحة إعلانية في شاشة الفائز ونهاية المباراة -->
+      <div class="ad-slot-container ad-slot-winner" data-ad-slot-key="winner_banner" aria-label="إعلان"></div>
       <button id="winnerExitBtn" class="btn btn-gold btn-lg full-width" type="button">
         العودة للصفحة الرئيسية
       </button>
@@ -554,13 +604,14 @@
   <!-- حاوية الإشعارات الفورية -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <!-- تحميل Socket.io (عند تشغيل خادم Node.js) + محرك الغرف السحابية العالمي v3.1 لجميع الشبكات -->
+  <!-- تحميل Socket.io (عند تشغيل خادم Node.js) + محرك الغرف السحابية العالمي v4.1 + مدير الإعلانات المفعّل -->
   <script src="/socket.io/socket.io.js" onerror="window.__NO_SOCKET_IO__=true"></script>
-  <script src="js/shared/gameData.js?v=3.1"></script>
-  <script src="js/shared/gameEngine.js?v=3.1"></script>
-  <script src="js/audio.js?v=3.1"></script>
-  <script src="js/network.js?v=3.1"></script>
-  <script src="js/app.js?v=3.1"></script>
+  <script src="js/shared/gameData.js?v=4.1"></script>
+  <script src="js/shared/gameEngine.js?v=4.1"></script>
+  <script src="js/audio.js?v=4.1"></script>
+  <script src="js/ads.js?v=4.1"></script>
+  <script src="js/network.js?v=4.1"></script>
+  <script src="js/app.js?v=4.1"></script>
 </body>
 </html>
 

@@ -327,7 +327,10 @@ io.on('connection', (socket) => {
         result = Engine.declareBankruptcy(room, playerId, { targetId: payload.targetId });
         break;
       case 'END_TURN':
-        result = Engine.endTurn(room, playerId);
+        result = Engine.endTurn(room, playerId, payload);
+        break;
+      case 'FINISH_BY_WEALTH':
+        result = Engine.finishGameByWealth(room, playerId);
         break;
       case 'PROPOSE_TRADE':
         result = Engine.proposeTrade(room, playerId, payload);
