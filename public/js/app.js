@@ -120,6 +120,13 @@
     );
   }
 
+  function getCountryFlagSvg(key) {
+    if (typeof BankElHazData !== 'undefined' && typeof BankElHazData.getCountryFlagSvg === 'function') {
+      return BankElHazData.getCountryFlagSvg(key);
+    }
+    return '';
+  }
+
   function showToast(msg, type) {
     if (!els.toastContainer) return;
     const t = document.createElement('div');
@@ -304,15 +311,13 @@
       const coords = getGridCoords(tile.id);
       const isCorner = coords.side.indexOf('corner') === 0;
       const isProp = tile.type === 'property';
-      const hasColorBar = Boolean(isProp && COLOR_GROUPS[tile.group]);
 
       const div = document.createElement('div');
       div.className =
         'board-tile ' +
         'tile-side-' + coords.side +
         (isCorner ? ' corner-tile corner-' + coords.side : '') +
-        (isProp ? ' property-tile' : '') +
-        (hasColorBar ? ' has-color-bar' : '');
+        (isProp ? ' property-tile' : '');
       div.dataset.tileId = String(tile.id);
       div.style.gridRow = String(coords.row);
       div.style.gridColumn = String(coords.col);
@@ -350,18 +355,14 @@
             '</div>';
         }
       } else {
-        let colorHeaderHtml = '';
-        if (hasColorBar) {
-          const grp = COLOR_GROUPS[tile.group];
-          colorHeaderHtml =
-            '<div class="tile-color-bar" id="tileBar_' + tile.id + '" style="background:' + grp.color + ';">' +
-            '<span class="tile-bar-houses" id="tileHouses_' + tile.id + '"></span>' +
-            '</div>';
-        }
-
         let emblemHtml = '';
-        if (tile.flag) {
-          emblemHtml = '<div class="tile-flag-circle" title="' + escapeHtml(tile.country || '') + '">' + tile.flag + '</div>';
+        if (isProp) {
+          // علم الدولة الحقيقي بصيغة SVG فائقة النقاء لتمييز المجموعة بالكامل بدون شرائط
+          const flagSvg = getCountryFlagSvg(tile.group || tile.country);
+          emblemHtml =
+            '<div class="tile-flag-circle" title="' + escapeHtml(tile.country || '') + '">' +
+            (flagSvg || tile.flag || '🏛️') +
+            '</div>';
         } else if (tile.type === 'station') {
           emblemHtml = '<div class="tile-special-icon airport-icon">✈️</div>';
         } else if (tile.type === 'utility') {
@@ -373,7 +374,7 @@
         } else if (tile.type === 'tax') {
           emblemHtml = '<div class="tile-special-icon tax-icon">' + tile.icon + '</div>';
         } else {
-          emblemHtml = '<div class="tile-special-icon">' + tile.icon + '</div>';
+          emblemHtml = '<div class="tile-special-icon">' + (tile.icon || '📍') + '</div>';
         }
 
         let bottomPriceHtml = '';
@@ -383,9 +384,10 @@
           bottomPriceHtml = '<div class="tile-price">-$' + tile.taxAmount + '</div>';
         }
 
+        // بطاقة نقية بدون شرائط ملونة: ختم المالك البارز + شارة المباني + علم الدولة + الاسم + السعر
         innerHtml =
-          colorHeaderHtml +
           '<div class="tile-owner-stamp hidden" id="tileStamp_' + tile.id + '"></div>' +
+          '<div class="tile-houses-tag" id="tileHouses_' + tile.id + '"></div>' +
           emblemHtml +
           '<div class="tile-name">' + escapeHtml(tile.shortName || tile.name) + '</div>' +
           bottomPriceHtml;
@@ -647,7 +649,7 @@
       const prop = state.properties[tid];
       const tileEl = els.boardGrid.querySelector('.board-tile[data-tile-id="' + tid + '"]');
       const stampEl = document.getElementById('tileStamp_' + tid);
-      const barEl = document.getElementById('tileBar_' + tid);
+      const houseSpan = document.getElementById('tileHouses_' + tid);
       if (!tileEl) return;
 
       tileEl.classList.toggle('is-mortgaged', Boolean(prop.mortgaged));
@@ -659,11 +661,11 @@
       if (owner) {
         tileEl.classList.add('is-owned');
         tileEl.style.setProperty('--owner-color', owner.color);
-        tileEl.style.setProperty('--owner-tint', hexToRgba(owner.color, 0.22));
+        tileEl.style.setProperty('--owner-tint', hexToRgba(owner.color, 0.28));
         if (stampEl) {
           stampEl.classList.remove('hidden');
-          stampEl.innerHTML = '<span class="stamp-dot" style="background:' + owner.color + '"></span>';
-          stampEl.title = 'ملك: ' + owner.name;
+          stampEl.innerHTML = '<span class="owner-tile-dot" style="background:' + owner.color + ';box-shadow:0 0 6px ' + owner.color + '"></span>';
+          stampEl.title = 'المالك: ' + owner.name;
         }
       } else {
         tileEl.classList.remove('is-owned');
@@ -675,22 +677,17 @@
         }
       }
 
-      if (barEl) {
-        barEl.classList.toggle('has-buildings', prop.houses > 0);
-        const houseSpan = document.getElementById('tileHouses_' + tid);
+      if (houseSpan) {
         let hText = '';
         if (prop.houses === 5) {
-          hText = '🏢';
+          hText = '🏨';
         } else if (prop.houses > 1) {
-          hText = '🏠 x ' + prop.houses;
+          hText = '🏠x' + prop.houses;
         } else if (prop.houses === 1) {
           hText = '🏠';
         }
-        if (houseSpan) {
-          houseSpan.textContent = hText;
-        } else {
-          barEl.textContent = hText;
-        }
+        houseSpan.textContent = hText;
+        houseSpan.classList.toggle('has-buildings', prop.houses > 0);
       }
     });
   }
@@ -1285,14 +1282,23 @@
       groupLabel = 'مرفق خدمات عامة';
     }
 
-      let emblemChar = tile.flag || tile.icon;
-      bodyHtml =
-        '<div class="deed-header" style="background:' + headerBg + ';color:' + headerColor + '">' +
-        '<span class="deed-emblem">' + emblemChar + '</span>' +
-        '<div style="font-size:0.8rem;font-weight:800;opacity:0.92">' + escapeHtml(groupLabel) + '</div>' +
-        '<h3>' + escapeHtml(tile.name) + '</h3>' +
-        (tile.subtitle ? '<div style="font-size:0.86rem;opacity:0.95;margin-top:2px">' + escapeHtml(tile.subtitle) + '</div>' : '') +
-        '</div>';
+    let emblemHtml = '';
+    if (tile.type === 'property') {
+      const flagSvg = getCountryFlagSvg(tile.group || tile.country);
+      emblemHtml = flagSvg
+        ? '<div class="deed-flag-wrap">' + flagSvg + '</div>'
+        : '<span class="deed-emblem">' + (tile.flag || '🏛️') + '</span>';
+    } else {
+      emblemHtml = '<span class="deed-emblem">' + (tile.flag || tile.icon || '📍') + '</span>';
+    }
+
+    let bodyHtml =
+      '<div class="deed-header" style="background:' + headerBg + ';color:' + headerColor + '">' +
+      emblemHtml +
+      '<div style="font-size:0.8rem;font-weight:800;opacity:0.92">' + escapeHtml(groupLabel) + '</div>' +
+      '<h3>' + escapeHtml(tile.name) + '</h3>' +
+      (tile.subtitle ? '<div style="font-size:0.86rem;opacity:0.95;margin-top:2px">' + escapeHtml(tile.subtitle) + '</div>' : '') +
+      '</div>';
 
     if (isPurchasable(tile)) {
       bodyHtml +=

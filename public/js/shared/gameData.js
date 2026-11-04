@@ -965,6 +965,96 @@
     return sign + '$' + abs.toLocaleString('en-US');
   }
 
+  /**
+   * أعلام الدول العربية بتصميم متجهي SVG فائق الدقة (Vector SVG Flags)
+   * يضمن ظهور أعلام الدول بشكل نقي وحقيقي 100% على كافة الشاشات والمتصفحات
+   * ويستبدل الرموز النصية أو الإيموجي بأعلام واضحة تميز كل مجموعة.
+   */
+  function getCountryFlagSvg(key) {
+    if (!key) return '';
+    const k = String(key).toLowerCase().trim();
+
+    // 1. مصر (Egypt) - القاهرة، الإسكندرية
+    if (k === 'egypt' || k === 'royal' || k === 'مصر' || k === '🇪🇬') {
+      return '<svg class="country-flag-svg flag-egypt" viewBox="0 0 36 24" xmlns="http://www.w3.org/2000/svg" aria-label="علم مصر">' +
+        '<rect width="36" height="8" fill="#ce1126"/>' +
+        '<rect y="8" width="36" height="8" fill="#ffffff"/>' +
+        '<rect y="16" width="36" height="8" fill="#000000"/>' +
+        '<circle cx="18" cy="12" r="2.3" fill="#c69214"/>' +
+        '<path d="M16.8 11.2 h2.4 v2 h-2.4 z" fill="#8f6300"/>' +
+        '</svg>';
+    }
+
+    // 2. المملكة العربية السعودية (Saudi Arabia) - الرياض، جدة، الدمام
+    if (k === 'saudi' || k === 'green' || k === 'السعودية' || k === '🇸🇦') {
+      return '<svg class="country-flag-svg flag-saudi" viewBox="0 0 36 24" xmlns="http://www.w3.org/2000/svg" aria-label="علم السعودية">' +
+        '<rect width="36" height="24" fill="#006c35"/>' +
+        '<path d="M8 8 c2-0.8 4.5 0.5 7-0.5 c2.5-0.8 5 0.5 7.5-0.5 c2-0.6 4 0.2 5.5-0.2 c-1 1-2.5 0.6-4.5 1.2 c-2.5 0.8-4.5-0.4-7 0.3 c-2.5 0.7-4.5-0.2-6.5-0.7 z" fill="#ffffff"/>' +
+        '<path d="M9 14.5 h17 v1.5 H9 z M8.5 13.2 v4 h1.5 v-4 z M26 13.8 l2.5 1.4 l-2.5 1.4 z" fill="#ffffff"/>' +
+        '</svg>';
+    }
+
+    // 3. دولة الإمارات العربية المتحدة (UAE) - أبو ظبي، دبي، الشارقة
+    if (k === 'uae' || k === 'yellow' || k === 'الإمارات' || k === '🇦🇪') {
+      return '<svg class="country-flag-svg flag-uae" viewBox="0 0 36 24" xmlns="http://www.w3.org/2000/svg" aria-label="علم الإمارات">' +
+        '<rect width="36" height="8" fill="#00732f"/>' +
+        '<rect y="8" width="36" height="8" fill="#ffffff"/>' +
+        '<rect y="16" width="36" height="8" fill="#000000"/>' +
+        '<rect width="9" height="24" fill="#ff0000"/>' +
+        '</svg>';
+    }
+
+    // 4. دولة قطر (Qatar) - الدوحة، الوكرة، الخور
+    if (k === 'qatar' || k === 'red' || k === 'قطر' || k === '🇶🇦') {
+      return '<svg class="country-flag-svg flag-qatar" viewBox="0 0 36 24" xmlns="http://www.w3.org/2000/svg" aria-label="علم قطر">' +
+        '<rect width="36" height="24" fill="#8d1b3d"/>' +
+        '<path d="M0 0 h10.5 l3 1.33 l-3 1.33 l3 1.33 l-3 1.33 l3 1.33 l-3 1.33 l3 1.33 l-3 1.33 l3 1.33 l-3 1.33 l3 1.33 l-3 1.33 l3 1.33 l-3 1.33 l3 1.33 l-3 1.33 l3 1.33 l-3 1.33 L0 24 Z" fill="#ffffff"/>' +
+        '</svg>';
+    }
+
+    // 5. دولة الكويت (Kuwait) - مدينة الكويت، حولي، السالمية
+    if (k === 'kuwait' || k === 'orange' || k === 'الكويت' || k === '🇰🇼') {
+      return '<svg class="country-flag-svg flag-kuwait" viewBox="0 0 36 24" xmlns="http://www.w3.org/2000/svg" aria-label="علم الكويت">' +
+        '<rect width="36" height="8" fill="#007a3d"/>' +
+        '<rect y="8" width="36" height="8" fill="#ffffff"/>' +
+        '<rect y="16" width="36" height="8" fill="#ce1126"/>' +
+        '<polygon points="0,0 10.5,8 10.5,16 0,24" fill="#000000"/>' +
+        '</svg>';
+    }
+
+    // 6. المملكة الأردنية الهاشمية (Jordan) - عمّان، العقبة، إربد
+    if (k === 'jordan' || k === 'pink' || k === 'الأردن' || k === '🇯🇴') {
+      return '<svg class="country-flag-svg flag-jordan" viewBox="0 0 36 24" xmlns="http://www.w3.org/2000/svg" aria-label="علم الأردن">' +
+        '<rect width="36" height="8" fill="#000000"/>' +
+        '<rect y="8" width="36" height="8" fill="#ffffff"/>' +
+        '<rect y="16" width="36" height="8" fill="#007a3d"/>' +
+        '<polygon points="0,0 15,12 0,24" fill="#ce1126"/>' +
+        '<polygon points="5.5,11.2 5.9,11.8 6.6,11.5 6.2,12.2 6.8,12.6 6.1,12.8 6.2,13.5 5.6,13.1 5.1,13.6 5.1,12.8 4.4,12.7 4.9,12.2 4.6,11.5 5.2,11.8" fill="#ffffff"/>' +
+        '</svg>';
+    }
+
+    // 7. المملكة المغربية (Morocco) - الدار البيضاء، مراكش، طنجة
+    if (k === 'morocco' || k === 'sky' || k === 'المغرب' || k === '🇲🇦') {
+      return '<svg class="country-flag-svg flag-morocco" viewBox="0 0 36 24" xmlns="http://www.w3.org/2000/svg" aria-label="علم المغرب">' +
+        '<rect width="36" height="24" fill="#c1272d"/>' +
+        '<polygon points="18,5 19.8,10.6 25.5,10.6 20.9,14.2 22.7,19.8 18,16.2 13.3,19.8 15.1,14.2 10.5,10.6 16.2,10.6" fill="none" stroke="#006233" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '</svg>';
+    }
+
+    // 8. سلطنة عُمان (Oman) - صلالة، مسقط
+    if (k === 'oman' || k === 'brown' || k === 'عُمان' || k === '🇴🇲') {
+      return '<svg class="country-flag-svg flag-oman" viewBox="0 0 36 24" xmlns="http://www.w3.org/2000/svg" aria-label="علم عُمان">' +
+        '<rect width="36" height="8" fill="#ffffff"/>' +
+        '<rect y="8" width="36" height="8" fill="#db161e"/>' +
+        '<rect y="16" width="36" height="8" fill="#008020"/>' +
+        '<rect width="9" height="24" fill="#db161e"/>' +
+        '<path d="M4.5 4 l-1.8 1.8 l1.8 1.8 M4.5 4 l1.8 1.8 l-1.8 1.8 M4.5 3.5 v5" stroke="#ffffff" stroke-width="1" fill="none"/>' +
+        '</svg>';
+    }
+
+    return '';
+  }
+
   return {
     GAME_CONFIG: GAME_CONFIG,
     PLAYER_PRESETS: PLAYER_PRESETS,
@@ -975,6 +1065,7 @@
     getGridCoords: getGridCoords,
     isPurchasable: isPurchasable,
     getGroupTiles: getGroupTiles,
-    formatMoney: formatMoney
+    formatMoney: formatMoney,
+    getCountryFlagSvg: getCountryFlagSvg
   };
 });
