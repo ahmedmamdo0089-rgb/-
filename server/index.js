@@ -210,6 +210,18 @@ io.on('connection', (socket) => {
         existingPlayerId = saved.playerId;
       }
     }
+    if (!existingPlayerId && payload && payload.playerId) {
+      const foundById = room.players.find(function (p) { return p.id === payload.playerId; });
+      if (foundById) existingPlayerId = foundById.id;
+    }
+    if (!existingPlayerId && payload && payload.playerName) {
+      const cleanName = String(payload.playerName).trim().toLowerCase();
+      const foundByName = room.players.find(function (p) { return p.name.trim().toLowerCase() === cleanName; });
+      if (foundByName) existingPlayerId = foundByName.id;
+    }
+    if (existingPlayerId && sessionToken) {
+      sessions.set(sessionToken, { roomCode: code, playerId: existingPlayerId });
+    }
 
     const res = Engine.joinRoom(room, {
       playerName: payload && payload.playerName,
@@ -344,6 +356,12 @@ io.on('connection', (socket) => {
       case 'CHAT':
         result = Engine.addChatMessage(room, playerId, payload.text);
         break;
+      case 'PING': {
+        const p = room.players.find(function (pl) { return pl.id === playerId; });
+        if (p) p.connected = true;
+        result = { ok: true };
+        break;
+      }
       default:
         result = { ok: false, error: 'إجراء غير مدعوم.' };
     }

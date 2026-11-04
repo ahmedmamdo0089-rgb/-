@@ -1,20 +1,23 @@
 :root {
-  --bg-deep: #080f23;
-  --bg-panel: #101b37;
-  --bg-panel-elevated: #17254a;
-  --bg-card: #1d2e5a;
-  --gold: #f5b942;
-  --gold-bright: #ffd166;
-  --gold-dark: #c98a18;
+  --bg-deep: #13111c;
+  --bg-panel: #1b162b;
+  --bg-panel-elevated: #231c38;
+  --bg-card: #1f1933;
+  --richup-purple: #7c3aed;
+  --richup-purple-bright: #8b5cf6;
+  --richup-purple-dark: #6d28d9;
+  --gold: #f59e0b;
+  --gold-bright: #fbbf24;
+  --gold-dark: #d97706;
   --emerald: #10b981;
   --emerald-dark: #059669;
-  --danger: #ef4444;
+  --danger: #e05353;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --border-subtle: rgba(245, 185, 66, 0.22);
-  --board-ivory: #f8f3e6;
-  --board-tile-bg: #fcf9f2;
-  --board-border: #1e3a2f;
+  --border-subtle: #2d264a;
+  --board-ivory: #1f1934;
+  --board-tile-bg: #201a35;
+  --board-border: #2c2448;
   --die-half: 25px;
   --topbar-h: 60px;
 }
@@ -29,7 +32,7 @@
 html, body {
   height: 100%;
   font-family: 'Cairo', 'Tajawal', sans-serif;
-  background: radial-gradient(circle at top, #15264f 0%, #080f23 70%);
+  background: radial-gradient(ellipse at 50% 15%, #221a38 0%, #13111c 75%);
   color: var(--text-main);
   overflow-x: hidden;
 }
@@ -191,9 +194,9 @@ button, input, select {
 }
 
 .btn-gold {
-  background: linear-gradient(135deg, #ffd166 0%, #e09f24 100%);
-  color: #161925;
-  box-shadow: 0 4px 14px rgba(245, 185, 66, 0.3);
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
 }
 
 .btn-gold:not(:disabled):hover {
@@ -701,21 +704,74 @@ button, input, select {
 
 .game-layout {
   flex: 1;
-  display: grid;
-  grid-template-columns: 316px minmax(0, 1fr) 295px;
-  gap: 10px;
-  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 8px 12px;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.desktop-side-ad {
+  flex: 0 0 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: sticky;
+  top: 12px;
+}
+
+@media (max-width: 1280px) {
+  .desktop-side-ad {
+    display: none !important;
+  }
 }
 
 .side-panel {
-  background: rgba(16, 27, 55, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: #181427;
+  border: 1.5px solid #3c335e;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.side-panel.panel-players {
+  display: none !important;
+}
+
+.side-panel.panel-social {
+  position: fixed;
+  bottom: 86px;
+  right: 22px;
+  width: min(390px, calc(100vw - 28px));
+  height: 520px;
+  max-height: calc(100vh - 110px);
+  background: #181427;
+  border: 1.5px solid #3c335e;
+  border-radius: 16px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.75);
+  z-index: 210;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s;
+}
+
+.side-panel.panel-social:not(.chat-open) {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px) scale(0.95);
+  pointer-events: none;
+}
+
+.side-panel.panel-social.chat-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
 }
 
 .subtabs {
@@ -945,52 +1001,60 @@ button, input, select {
 /* ==================== ساحة الخريطة المربعة 11×11 ==================== */
 .board-stage {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  justify-content: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 4px;
 }
 
 .board-scroll-wrapper {
   width: 100%;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: auto;
+  overflow: visible;
+  flex-shrink: 0;
 }
 
 .board-grid {
   direction: ltr; /* لضمان تطابق إحداثيات الشبكة 1..11 في جميع المتصفحات */
   aspect-ratio: 1 / 1;
-  width: min(100%, calc(100dvh - var(--topbar-h) - 24px));
-  max-width: 840px;
-  background: #143328;
-  border: 3px solid var(--gold);
+  width: min(860px, calc(100vh - var(--topbar-h) - 20px));
+  height: min(860px, calc(100vh - var(--topbar-h) - 20px));
+  max-width: 860px;
+  background: #171325;
+  border: 2.5px solid #2e264a;
   border-radius: 14px;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.75);
   display: grid;
-  grid-template-columns: 1.2fr repeat(9, 1fr) 1.2fr;
-  grid-template-rows: 1.2fr repeat(9, 1fr) 1.2fr;
+  grid-template-columns: 1.25fr repeat(9, 1fr) 1.25fr;
+  grid-template-rows: 1.25fr repeat(9, 1fr) 1.25fr;
   gap: 2px;
   padding: 3px;
   position: relative;
   -webkit-user-select: none;
   user-select: none;
+  margin: 0 auto;
 }
 
 .board-tile {
   direction: rtl;
-  background: var(--board-tile-bg);
-  color: #0f172a;
-  border-radius: 4px;
+  background: var(--board-tile-bg, #201a35);
+  color: #f8fafc;
+  border: 1px solid #2b2346;
+  border-radius: 6px;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
   text-align: center;
-  padding: 1px;
+  padding: 2px 1px 1px 1px;
   cursor: pointer;
   overflow: hidden;
   transition: transform 0.14s, box-shadow 0.14s, background-color 0.2s;
@@ -998,41 +1062,92 @@ button, input, select {
 
 .board-tile:hover {
   z-index: 6;
-  box-shadow: 0 0 0 2px var(--gold-bright), 0 6px 14px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 2px var(--richup-purple-bright), 0 6px 14px rgba(0, 0, 0, 0.5);
 }
 
 .board-tile.corner-tile {
-  background: linear-gradient(145deg, #fef9ea, #f1e4c3);
+  background: #19142b;
   justify-content: center;
   gap: 1px;
   padding: 2px;
 }
 
+/* الأركان الأربعة بتصميم Richup.io الأيقوني */
+.corner-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+}
+.corner-start {
+  color: #4ade80;
+}
+.corner-badge-top {
+  font-size: clamp(0.44rem, 0.75vw, 0.65rem);
+  font-weight: 700;
+  color: #4ade80;
+}
+.green-arrows {
+  font-size: clamp(0.95rem, 1.8vw, 1.5rem);
+  line-height: 1;
+}
+.corner-main-title {
+  font-size: clamp(0.55rem, 0.95vw, 0.85rem);
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+.corner-start .corner-main-title {
+  color: #4ade80;
+}
+.corner-sub-text {
+  font-size: clamp(0.42rem, 0.7vw, 0.62rem);
+  color: #94a3b8;
+}
+.corner-prison {
+  color: #94a3b8;
+}
+.corner-vacation {
+  color: #38bdf8;
+}
+.corner-go-jail {
+  color: #f87171;
+}
+.corner-symbol {
+  font-size: clamp(0.95rem, 1.8vw, 1.5rem);
+  line-height: 1;
+}
+
 /* علامة الملكية الظاهرة والواضحة على الخريطة */
 .board-tile.is-owned {
-  background: var(--owner-tint, #fcf9f2);
-  box-shadow: inset 0 0 0 2px var(--owner-color, #10b981);
+  background: var(--owner-tint, #261f3d);
+  box-shadow: inset 0 0 0 2px var(--owner-color, #8b5cf6);
 }
 
 .tile-owner-stamp {
   position: absolute;
-  top: 7px;
-  left: 1px;
-  min-width: clamp(13px, 1.9vw, 20px);
-  height: clamp(13px, 1.9vw, 20px);
-  padding: 0 2px;
+  top: 6px;
+  left: 2px;
+  min-width: clamp(10px, 1.5vw, 16px);
+  height: clamp(10px, 1.5vw, 16px);
   border-radius: 999px;
-  background: var(--owner-color, #10b981);
-  color: #ffffff;
+  background: var(--owner-color, #8b5cf6);
   border: 1.5px solid #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(0.46rem, 0.8vw, 0.72rem);
-  line-height: 1;
   z-index: 5;
   pointer-events: none;
+}
+.stamp-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ffffff;
 }
 
 .board-tile:not(.has-color-bar) .tile-owner-stamp {
@@ -1040,15 +1155,15 @@ button, input, select {
 }
 
 .board-tile.is-mortgaged {
-  background: #e2e8f0;
-  opacity: 0.88;
+  background: #1c182a;
+  opacity: 0.65;
 }
 
 .board-tile.is-mortgaged::after {
   content: 'مرهون';
   position: absolute;
-  inset: auto 1px 13px 1px;
-  background: rgba(185, 28, 28, 0.9);
+  inset: auto 1px 14px 1px;
+  background: rgba(220, 38, 38, 0.9);
   color: #fff;
   font-size: 0.46rem;
   font-weight: 800;
@@ -1059,87 +1174,187 @@ button, input, select {
 }
 
 .tile-color-bar {
-  width: 100%;
-  height: 7px;
-  min-height: 7px;
-  flex-shrink: 0;
-  border-radius: 2px 2px 0 0;
+  display: none !important;
+}
+
+/* توجيه عناصر البطاقة وفقاً للأضلاع الأربعة لمطابقة مكان العلامات الحمراء (الحافة الداخلية نحو النرد) */
+.board-tile.tile-side-top {
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.board-tile.tile-side-bottom {
+  flex-direction: column-reverse;
+  justify-content: space-between;
+}
+
+.board-tile.tile-side-left {
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 2px 3px;
+}
+
+.board-tile.tile-side-right {
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  padding: 2px 3px;
+}
+
+/* الحافة الداخلية المواجهة للنرد لجميع البطاقات (مكان العلامات الحمراء) */
+.tile-inner-edge {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.tile-flag-circle {
+  width: clamp(16px, 2.1vw, 24px);
+  height: clamp(16px, 2.1vw, 24px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+  flex-shrink: 0;
+}
+
+.tile-flag-circle .flag-svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+}
+
+.flag-emoji-fallback {
+  font-size: clamp(0.95rem, 1.8vw, 1.35rem);
+  line-height: 1;
+}
+
+.tile-bar-houses {
+  font-size: clamp(0.48rem, 0.9vw, 0.64rem);
+  font-weight: 800;
+  line-height: 1;
+  color: #ffd700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.tile-special-icon {
+  font-size: clamp(0.95rem, 1.8vw, 1.35rem);
+  line-height: 1;
+  margin: 0;
+  flex-shrink: 0;
+}
+.surprise-icon {
+  color: #f472b6;
+  filter: drop-shadow(0 0 6px rgba(244, 114, 182, 0.6));
+}
+.treasure-icon {
+  color: #fbbf24;
+}
+.airport-icon {
+  color: #38bdf8;
+}
+
+.tile-outer-edge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  flex-shrink: 0;
   gap: 1px;
-  font-size: 0.48rem;
-  line-height: 1;
 }
 
-.tile-color-bar.has-buildings {
-  height: 11px;
-  min-height: 11px;
-}
-
-.tile-top-emblem {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  margin-top: 1px;
-  flex-shrink: 0;
-}
-
-.tile-icon {
-  font-size: clamp(0.54rem, 0.92vw, 0.86rem);
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.corner-tile .tile-icon {
-  font-size: clamp(0.86rem, 1.7vw, 1.45rem);
+.tile-side-left .tile-outer-edge,
+.tile-side-right .tile-outer-edge {
+  width: auto;
 }
 
 .tile-name {
   flex: 1 1 auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
-  font-weight: 900;
-  font-size: clamp(0.42rem, 0.72vw, 0.68rem);
-  line-height: 1.03;
-  letter-spacing: -0.15px;
-  color: #0b132b;
+  gap: 1px;
   padding: 0 1px;
-  overflow-wrap: anywhere;
+  line-height: 1.05;
+  overflow: hidden;
 }
 
-.corner-tile .tile-name {
-  flex: 0 0 auto;
-  font-size: clamp(0.48rem, 0.82vw, 0.74rem);
-  line-height: 1.06;
+.tile-main-city {
+  font-weight: 800;
+  font-size: clamp(0.46rem, 0.82vw, 0.72rem);
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  letter-spacing: -0.15px;
 }
 
 .tile-price {
   flex-shrink: 0;
-  font-size: clamp(0.41rem, 0.64vw, 0.6rem);
-  font-weight: 900;
+  font-size: clamp(0.44rem, 0.74vw, 0.66rem);
+  font-weight: 800;
   line-height: 1.12;
-  color: #0f172a;
-  background: rgba(15, 23, 42, 0.1);
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.08);
   width: 100%;
   border-radius: 2px;
   padding: 1px 0;
   direction: ltr;
+  text-align: center;
+}
+
+.tile-side-left .tile-price,
+.tile-side-right .tile-price {
+  width: auto;
+  padding: 1px 3px;
+}
+
+.deed-monopoly-notice {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px dashed rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-align: center;
+  line-height: 1.4;
+  margin-top: 6px;
+}
+
+.deed-emblem-wrap {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  margin: 0 auto 6px auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+.deed-emblem-wrap .flag-svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
 }
 
 .board-tile.is-owned .tile-price {
-  background: var(--owner-color, #0f172a);
+  background: var(--owner-color, #7c3aed);
   color: #ffffff;
 }
 
-.tile-owner-ribbon {
-  display: none;
-}
-
-/* طبقة قطع اللاعبين المتحركة */
+/* طبقة قطع اللاعبين المتحركة — شخصيات Richup.io الأيقونية */
 .tokens-layer {
   position: absolute;
   inset: 0;
@@ -1149,16 +1364,50 @@ button, input, select {
 
 .board-token {
   position: absolute;
-  width: clamp(20px, 2.8vw, 30px);
-  height: clamp(20px, 2.8vw, 30px);
+  width: clamp(22px, 3.2vw, 34px);
+  height: clamp(22px, 3.2vw, 34px);
   border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: clamp(0.72rem, 1.15vw, 1rem);
   border: 2px solid #ffffff;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.65);
   transform: translate(-50%, -50%);
   transition: left 0.14s linear, top 0.14s linear, transform 0.14s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 22;
+}
+
+.board-token .richup-token-eyes {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.board-token .richup-eye {
+  position: absolute;
+  top: 26%;
+  width: 32%;
+  height: 32%;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.board-token .richup-eye.left {
+  left: 18%;
+}
+.board-token .richup-eye.right {
+  right: 18%;
+}
+.board-token .richup-pupil {
+  width: 44%;
+  height: 44%;
+  background: #0f172a;
+  border-radius: 50%;
 }
 
 .board-token.hopping {
@@ -1166,8 +1415,56 @@ button, input, select {
 }
 
 .board-token.active-player-token {
-  box-shadow: 0 0 0 3px var(--gold-bright), 0 4px 12px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 0 0 3px var(--gold-bright), 0 4px 14px rgba(0, 0, 0, 0.7);
   z-index: 25;
+}
+
+/* شخصية Richup.io الدائرية العامة */
+.richup-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--blob-color, #38bdf8);
+  position: relative;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+  display: inline-block;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+}
+.richup-avatar.sm {
+  width: 34px;
+  height: 34px;
+}
+.richup-avatar.xs {
+  width: 22px;
+  height: 22px;
+}
+.richup-avatar.lg {
+  width: 52px;
+  height: 52px;
+}
+.richup-avatar .richup-eye {
+  position: absolute;
+  top: 26%;
+  width: 32%;
+  height: 32%;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.richup-avatar .richup-eye.left {
+  left: 18%;
+}
+.richup-avatar .richup-eye.right {
+  right: 18%;
+}
+.richup-avatar .richup-pupil {
+  width: 44%;
+  height: 44%;
+  background: #0f172a;
+  border-radius: 50%;
 }
 
 /* ==================== مركز اللوحة والنرد ثلاثي الأبعاد ==================== */
@@ -1175,17 +1472,297 @@ button, input, select {
   direction: rtl;
   grid-row: 2 / 11;
   grid-column: 2 / 11;
-  background: radial-gradient(circle at center, #16382c 0%, #0b1f19 100%);
-  border: 2px solid rgba(245, 185, 66, 0.4);
+  background: radial-gradient(circle at center, #1b162f 0%, #110d1f 100%);
+  border: 1.5px solid #2d264a;
   border-radius: 10px;
-  padding: clamp(8px, 1.5vw, 18px);
+  padding: clamp(6px, 1.2vw, 14px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
   text-align: center;
   position: relative;
+  overflow: hidden;
+}
+
+.center-live-feed {
+  width: 100%;
+  max-width: 380px;
+  max-height: 95px;
+  min-height: 48px;
   overflow-y: auto;
+  margin-top: 2px;
+  padding: 3px 6px;
+  background: rgba(15, 11, 26, 0.45);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  direction: rtl;
+  backdrop-filter: blur(4px);
+}
+.center-live-feed::-webkit-scrollbar {
+  width: 3px;
+}
+.center-live-feed::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+.feed-entry {
+  font-size: clamp(0.62rem, 1.05vw, 0.74rem);
+  color: #e2e8f0;
+  line-height: 1.25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.feed-dot {
+  width: 7px;
+  height: 7px;
+  min-width: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.feed-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* منطقة ما تحت الرقعة — تصميم Richup.io للجوال والشاشات */
+.under-board-area {
+  width: 100%;
+  max-width: 600px;
+  margin: 12px auto 30px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 10px;
+}
+
+.under-board-players {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.under-player-card {
+  background: #1e1933;
+  border: 1px solid #2d264a;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.under-player-card.active-turn {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.35);
+}
+.under-player-card.is-bankrupt {
+  opacity: 0.55;
+  filter: grayscale(0.8);
+}
+
+.under-player-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.under-player-info {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+.under-player-name {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.me-pill {
+  background: rgba(139, 92, 246, 0.25);
+  border: 1px solid #8b5cf6;
+  color: #c4b5fd;
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.68rem;
+}
+.under-player-status {
+  font-size: 0.74rem;
+  color: #94a3b8;
+}
+.under-player-status.turn {
+  color: #4ade80;
+  font-weight: 700;
+}
+.under-player-status.jail {
+  color: #f87171;
+}
+
+.under-player-cash {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+.under-player-cash.negative {
+  color: #f87171;
+}
+
+/* الأزرار السريعة: إفلاس وصفقات */
+.under-board-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-bankrupt {
+  flex: 1;
+  background: #e05353;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(224, 83, 83, 0.3);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.btn-bankrupt:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.btn-richup-trades {
+  flex: 1;
+  background: #7c3aed;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.btn-richup-trades:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+.trades-badge-pill {
+  background: rgba(255, 255, 255, 0.22);
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+/* قائمة أملاكي التفاعلية */
+.under-board-properties {
+  background: #1b162c;
+  border: 1px solid #2d264a;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.under-props-header h4 {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #cbd5e1;
+}
+.under-props-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.under-prop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #231c38;
+  border-radius: 8px;
+  border-left: 4px solid var(--prop-bar-color, #7c3aed);
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.under-prop-row:hover {
+  background: #2b2346;
+}
+.under-prop-ident {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #ffffff;
+}
+.under-prop-flag {
+  font-size: 1.1rem;
+}
+.under-prop-status {
+  font-size: 0.82rem;
+  color: #ffd166;
+  font-weight: 700;
+}
+
+/* زر الدردشة العائم البنفسجي */
+.floating-chat-btn {
+  position: fixed;
+  bottom: 22px;
+  right: 22px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.5);
+  font-size: 1.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 120;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.floating-chat-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 10px 28px rgba(124, 58, 237, 0.65);
+}
+.floating-chat-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #13111c;
 }
 
 .center-header {
@@ -1380,10 +1957,7 @@ button, input, select {
 }
 
 .board-decks-row {
-  display: flex;
-  justify-content: space-between;
-  width: 92%;
-  pointer-events: none;
+  display: none !important;
 }
 
 .deck-pile {
@@ -2167,42 +2741,70 @@ button, input, select {
 
   /* استغلال أقصى عرض وارتفاع للهاتف لعرض المحافظات والأسعار والأيقونات كاملة وبوضوح تام */
   .board-grid {
-    aspect-ratio: auto;
-    width: 99.2vw;
-    height: min(calc(100dvh - var(--topbar-h) - 108px), 118vw);
-    min-height: 98vw;
+    aspect-ratio: 1 / 1;
+    width: min(99vw, 560px);
+    height: min(99vw, 560px);
+    max-width: 99vw;
     border-width: 2px;
     border-radius: 10px;
     gap: 1.5px;
     padding: 2px;
-    grid-template-columns: 1.12fr repeat(9, 1fr) 1.12fr;
-    grid-template-rows: 1.14fr repeat(9, 1fr) 1.14fr;
+    grid-template-columns: 1.22fr repeat(9, 1fr) 1.22fr;
+    grid-template-rows: 1.22fr repeat(9, 1fr) 1.22fr;
+    margin: 0 auto 12px auto;
   }
 
   .tile-color-bar {
-    height: 6px;
-    min-height: 6px;
-    font-size: 0.42rem;
+    display: none !important;
   }
 
-  .tile-color-bar.has-buildings {
-    height: 9px;
-    min-height: 9px;
+  .tile-top-header {
+    min-height: 20px;
+    padding-top: 1px;
+    gap: 2px;
   }
 
-  .tile-icon {
-    font-size: clamp(0.5rem, 2.25vw, 0.72rem);
+  .tile-flag-circle {
+    font-size: clamp(0.92rem, 2.8vw, 1.3rem);
+    line-height: 1;
+    margin: 0;
+  }
+
+  .tile-bar-houses {
+    font-size: clamp(0.46rem, 1.6vw, 0.6rem);
+  }
+
+  .tile-special-icon {
+    font-size: clamp(0.92rem, 2.8vw, 1.3rem);
+    line-height: 1;
+    margin: 0;
   }
 
   .corner-tile .tile-icon {
-    font-size: clamp(0.78rem, 3.4vw, 1.1rem);
+    font-size: clamp(0.82rem, 3.2vw, 1.15rem);
   }
 
   .tile-name {
-    font-size: clamp(0.39rem, 1.72vw, 0.58rem);
-    line-height: 1.02;
-    letter-spacing: -0.2px;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5px;
     padding: 0 1px;
+    line-height: 1.04;
+    overflow: hidden;
+  }
+
+  .tile-main-city {
+    font-size: clamp(0.44rem, 1.65vw, 0.65rem);
+    font-weight: 800;
+    letter-spacing: -0.2px;
+  }
+
+  .tile-sub-country {
+    font-size: clamp(0.34rem, 1.2vw, 0.48rem);
+    font-weight: 700;
   }
 
   .corner-tile .tile-name {
@@ -2210,7 +2812,7 @@ button, input, select {
   }
 
   .tile-price {
-    font-size: clamp(0.38rem, 1.62vw, 0.54rem);
+    font-size: clamp(0.42rem, 1.55vw, 0.6rem);
     padding: 0.5px 0;
   }
 
@@ -2224,18 +2826,37 @@ button, input, select {
   }
 
   .board-center {
-    padding: 5px 6px;
-    gap: 3px;
+    padding: 4px 5px;
+    gap: 2px;
   }
 
   .turn-control-hub {
-    padding: 7px 8px;
+    padding: 5px 6px;
     width: 98%;
   }
 
   .turn-banner {
-    font-size: 0.76rem;
-    margin-bottom: 6px;
+    font-size: 0.74rem;
+    margin-bottom: 4px;
+  }
+
+  .center-live-feed {
+    max-height: 72px;
+    min-height: 38px;
+    margin-top: 1px;
+    padding: 2px 4px;
+    gap: 2px;
+  }
+
+  .feed-entry {
+    font-size: clamp(0.56rem, 1.7vw, 0.68rem);
+    gap: 4px;
+  }
+
+  .feed-dot {
+    width: 6px;
+    height: 6px;
+    min-width: 6px;
   }
 
   /* وضع التكبير الفائق للهواتف الصغيرة */

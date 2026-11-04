@@ -190,6 +190,11 @@ function executeAction(room, playerId, payload) {
     case 'RESPOND_TRADE': return Engine.respondTrade(room, playerId, payload);
     case 'CANCEL_TRADE': return Engine.cancelTrade(room, playerId, payload.tradeId);
     case 'CHAT': return Engine.addChatMessage(room, playerId, payload.text);
+    case 'PING': {
+      const p = room.players.find(function (pl) { return pl.id === playerId; });
+      if (p) p.connected = true;
+      return { ok: true };
+    }
     default: return { ok: false, error: 'إجراء غير مدعوم.' };
   }
 }
@@ -341,6 +346,18 @@ module.exports = async function handler(req, res) {
       if (sessionToken && sessions.has(sessionToken)) {
         const saved = sessions.get(sessionToken);
         if (saved.roomCode === code) existingPlayerId = saved.playerId;
+      }
+      if (!existingPlayerId && body.playerId) {
+        const foundById = room.players.find(function (p) { return p.id === body.playerId; });
+        if (foundById) existingPlayerId = foundById.id;
+      }
+      if (!existingPlayerId && body.playerName) {
+        const cleanName = String(body.playerName).trim().toLowerCase();
+        const foundByName = room.players.find(function (p) { return p.name.trim().toLowerCase() === cleanName; });
+        if (foundByName) existingPlayerId = foundByName.id;
+      }
+      if (existingPlayerId && sessionToken) {
+        sessions.set(sessionToken, { roomCode: code, playerId: existingPlayerId });
       }
 
       const joined = Engine.joinRoom(room, {

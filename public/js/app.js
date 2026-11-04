@@ -75,6 +75,9 @@
       'tradeTheirCash', 'tradeTheirCards', 'tradeTheirProps',
       'tradeNoteInput', 'submitTradeBtn',
       'winnerModal', 'winnerTitle', 'winnerSubtitle', 'winnerStandings', 'winnerExitBtn',
+      'centerLiveFeed', 'underBoardArea', 'underBoardPlayers',
+      'underBoardBankruptBtn', 'underBoardTradesBtn', 'underBoardProperties',
+      'underPropsCount', 'underPropsList', 'floatingChatBtn', 'floatingChatBadge',
       'toastContainer'
     ];
     ids.forEach(function (id) {
@@ -85,10 +88,11 @@
   // Utilities
   function escapeHtml(str) {
     return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .split('&').join('&amp;')
+      .split('<').join('&lt;')
+      .split('>').join('&gt;')
+      .split('"').join('&quot;')
+      .split("'").join('&#39;');
   }
 
   function hexToRgba(hex, alpha) {
@@ -101,11 +105,20 @@
   }
 
   function formatSignedCash(amount) {
-    const n = Number(amount) || 0;
+    const n = Math.round(Number(amount) || 0);
     if (n < 0) {
-      return '-' + Math.abs(n).toLocaleString('en-US') + ' ج.م';
+      return '-$' + Math.abs(n).toLocaleString('en-US');
     }
     return formatMoney(n);
+  }
+
+  function renderRichupAvatar(color, sizeClass) {
+    return (
+      '<div class="richup-avatar ' + (sizeClass || '') + '" style="--blob-color:' + (color || '#38bdf8') + '">' +
+      '<span class="richup-eye left"><span class="richup-pupil"></span></span>' +
+      '<span class="richup-eye right"><span class="richup-pupil"></span></span>' +
+      '</div>'
+    );
   }
 
   function showToast(msg, type) {
@@ -236,19 +249,39 @@
 
   function saveSession(roomCode, playerId, sessionToken) {
     try {
-      localStorage.setItem('beh_last_name', els.playerNameInput.value.trim());
-      sessionStorage.setItem('beh_session_' + roomCode, JSON.stringify({
-        roomCode: roomCode,
+      const pName = (els.playerNameInput && els.playerNameInput.value.trim()) || localStorage.getItem('beh_last_name') || '';
+      if (pName) localStorage.setItem('beh_last_name', pName);
+      const sessionObj = {
+        roomCode: String(roomCode).toUpperCase().trim(),
         playerId: playerId,
-        sessionToken: sessionToken
-      }));
+        sessionToken: sessionToken,
+        playerName: pName,
+        avatarId: ui.selectedAvatarId,
+        timestamp: Date.now()
+      };
+      const json = JSON.stringify(sessionObj);
+      localStorage.setItem('beh_active_session', json);
+      localStorage.setItem('beh_session_' + sessionObj.roomCode, json);
+      sessionStorage.setItem('beh_session_' + sessionObj.roomCode, json);
     } catch (_e) { }
   }
 
   function loadSession(roomCode) {
     try {
-      const raw = sessionStorage.getItem('beh_session_' + roomCode);
-      return raw ? JSON.parse(raw) : null;
+      const code = roomCode ? String(roomCode).toUpperCase().trim() : null;
+      let raw = null;
+      if (code) {
+        raw = sessionStorage.getItem('beh_session_' + code) || localStorage.getItem('beh_session_' + code);
+      }
+      if (!raw) {
+        raw = localStorage.getItem('beh_active_session');
+      }
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (code && parsed.roomCode && parsed.roomCode !== code) {
+        return null;
+      }
+      return parsed;
     } catch (_e) {
       return null;
     }
@@ -256,7 +289,12 @@
 
   function clearSession(roomCode) {
     try {
-      if (roomCode) sessionStorage.removeItem('beh_session_' + roomCode);
+      if (roomCode) {
+        const code = String(roomCode).toUpperCase().trim();
+        sessionStorage.removeItem('beh_session_' + code);
+        localStorage.removeItem('beh_session_' + code);
+      }
+      localStorage.removeItem('beh_active_session');
     } catch (_e) { }
   }
 
@@ -275,9 +313,8 @@
       const selected = pr.id === ui.selectedAvatarId ? 'selected' : '';
       return (
         '<div class="avatar-option ' + selected + '" data-avatar-id="' + pr.id + '">' +
-        '<span class="av-icon">' + pr.icon + '</span>' +
+        renderRichupAvatar(pr.color, 'sm') +
         '<span class="av-name">' + escapeHtml(pr.name) + '</span>' +
-        '<div class="av-swatch" style="background:' + pr.color + '"></div>' +
         '</div>'
       );
     }).join('');
@@ -297,39 +334,115 @@
 
       const div = document.createElement('div');
       div.className =
-        'board-tile' +
-        (isCorner ? ' corner-tile' : '') +
+        'board-tile ' +
+        'tile-side-' + coords.side +
+        (isCorner ? ' corner-tile corner-' + coords.side : '') +
         (isProp ? ' property-tile' : '') +
         (hasColorBar ? ' has-color-bar' : '');
       div.dataset.tileId = String(tile.id);
       div.style.gridRow = String(coords.row);
       div.style.gridColumn = String(coords.col);
 
-      let colorHeaderHtml = '';
-      if (hasColorBar) {
-        const grp = COLOR_GROUPS[tile.group];
-        colorHeaderHtml =
-          '<div class="tile-color-bar" id="tileBar_' + tile.id + '" style="background:' + grp.color + ';color:' + grp.textColor + '"></div>';
+      let innerHtml = '';
+
+      if (isCorner) {
+        if (tile.id === 0) {
+          innerHtml =
+            '<div class="corner-inner corner-start">' +
+            '<div class="corner-badge-top">استلم 200$</div>' +
+            '<div class="corner-symbol green-arrows">⏩</div>' +
+            '<div class="corner-main-title">البداية</div>' +
+            '</div>';
+        } else if (tile.id === 10) {
+          innerHtml =
+            '<div class="corner-inner corner-prison">' +
+            '<div class="corner-symbol">⛓️</div>' +
+            '<div class="corner-main-title">السجن</div>' +
+            '<div class="corner-sub-text">زيارة / حجز</div>' +
+            '</div>';
+        } else if (tile.id === 20) {
+          innerHtml =
+            '<div class="corner-inner corner-vacation">' +
+            '<div class="corner-symbol">🌴</div>' +
+            '<div class="corner-main-title">الاستراحة</div>' +
+            '<div class="corner-sub-text">عطلة مجانية</div>' +
+            '</div>';
+        } else {
+          innerHtml =
+            '<div class="corner-inner corner-go-jail">' +
+            '<div class="corner-symbol">☠️</div>' +
+            '<div class="corner-main-title">إلى السجن</div>' +
+            '<div class="corner-sub-text">ادخل السجن!</div>' +
+            '</div>';
+        }
+      } else {
+        // تم وضع علم الدولة الأنيق في الحافة الداخلية المواجهة لمركز النرد (مكان العلامات الحمراء كما في Richup)
+        // ووضع السعر والمنازل في الحافة الخارجية
+        const flagSvgContent = tile.flagSvg || (tile.flag ? ('<span class="flag-emoji-fallback">' + tile.flag + '</span>') : '');
+        let innerEdgeHtml = '';
+        if (flagSvgContent) {
+          innerEdgeHtml =
+            '<div class="tile-inner-edge">' +
+              '<div class="tile-flag-circle" title="' + escapeHtml(tile.country || '') + '">' + flagSvgContent + '</div>' +
+            '</div>';
+        } else if (tile.type === 'station') {
+          innerEdgeHtml =
+            '<div class="tile-inner-edge">' +
+              '<div class="tile-special-icon airport-icon">✈️</div>' +
+            '</div>';
+        } else if (tile.type === 'utility') {
+          innerEdgeHtml =
+            '<div class="tile-inner-edge">' +
+              '<div class="tile-special-icon utility-icon">' + tile.icon + '</div>' +
+            '</div>';
+        } else if (tile.type === 'chance') {
+          innerEdgeHtml =
+            '<div class="tile-inner-edge">' +
+              '<div class="tile-special-icon surprise-icon">❓</div>' +
+            '</div>';
+        } else if (tile.type === 'community') {
+          innerEdgeHtml =
+            '<div class="tile-inner-edge">' +
+              '<div class="tile-special-icon treasure-icon">📦</div>' +
+            '</div>';
+        } else if (tile.type === 'tax') {
+          innerEdgeHtml =
+            '<div class="tile-inner-edge">' +
+              '<div class="tile-special-icon tax-icon">' + tile.icon + '</div>' +
+            '</div>';
+        } else {
+          innerEdgeHtml =
+            '<div class="tile-inner-edge">' +
+              '<div class="tile-special-icon">' + tile.icon + '</div>' +
+            '</div>';
+        }
+
+        let priceText = '';
+        if (tile.price) {
+          priceText = '$' + tile.price;
+        } else if (tile.taxAmount) {
+          priceText = '-$' + tile.taxAmount;
+        }
+
+        const outerEdgeHtml =
+          '<div class="tile-outer-edge">' +
+            '<span class="tile-bar-houses" id="tileHouses_' + tile.id + '"></span>' +
+            (priceText ? ('<div class="tile-price">' + priceText + '</div>') : '') +
+          '</div>';
+
+        const centerNameHtml =
+          '<div class="tile-name">' +
+            '<span class="tile-main-city">' + escapeHtml(tile.shortName || tile.name) + '</span>' +
+          '</div>';
+
+        innerHtml =
+          '<div class="tile-owner-stamp hidden" id="tileStamp_' + tile.id + '"></div>' +
+          outerEdgeHtml +
+          centerNameHtml +
+          innerEdgeHtml;
       }
 
-      // Always display the governorate/tile emblem at the top of the card
-      const iconHtml = '<div class="tile-top-emblem"><span class="tile-icon">' + tile.icon + '</span></div>';
-
-      let bottomPriceHtml = '';
-      if (tile.price) {
-        bottomPriceHtml = '<div class="tile-price">' + tile.price.toLocaleString('en-US') + '</div>';
-      } else if (tile.taxAmount) {
-        bottomPriceHtml = '<div class="tile-price">-' + tile.taxAmount.toLocaleString('en-US') + '</div>';
-      } else if (tile.id === 0) {
-        bottomPriceHtml = '<div class="tile-price">+' + GAME_CONFIG.GO_SALARY.toLocaleString('en-US') + '</div>';
-      }
-
-      div.innerHTML =
-        colorHeaderHtml +
-        '<div class="tile-owner-stamp hidden" id="tileStamp_' + tile.id + '"></div>' +
-        iconHtml +
-        '<div class="tile-name">' + escapeHtml(tile.shortName || tile.name) + '</div>' +
-        bottomPriceHtml;
+      div.innerHTML = innerHtml;
 
       div.addEventListener('click', function () {
         AudioFX.click();
@@ -369,7 +482,7 @@
         seatsHtml +=
           '<div class="lobby-seat">' +
           '<div class="seat-left">' +
-          '<div class="seat-avatar" style="background:' + p.color + '">' + p.icon + '</div>' +
+          renderRichupAvatar(p.color, 'sm') +
           '<div class="seat-meta">' +
           '<strong>' + escapeHtml(p.name) + '</strong>' +
           '<small>' + tags.join(' • ') + '</small>' +
@@ -474,7 +587,13 @@
         els.tokensLayer.appendChild(tokenEl);
       }
       tokenEl.style.background = p.color;
-      tokenEl.textContent = p.icon;
+      if (!tokenEl.querySelector('.richup-token-eyes')) {
+        tokenEl.innerHTML =
+          '<div class="richup-token-eyes">' +
+          '<span class="richup-eye left"><span class="richup-pupil"></span></span>' +
+          '<span class="richup-eye right"><span class="richup-pupil"></span></span>' +
+          '</div>';
+      }
       tokenEl.title = p.name;
       tokenEl.classList.toggle('active-player-token', Boolean(currentP && currentP.id === p.id));
     });
@@ -591,10 +710,10 @@
       if (owner) {
         tileEl.classList.add('is-owned');
         tileEl.style.setProperty('--owner-color', owner.color);
-        tileEl.style.setProperty('--owner-tint', hexToRgba(owner.color, 0.16));
+        tileEl.style.setProperty('--owner-tint', hexToRgba(owner.color, 0.22));
         if (stampEl) {
           stampEl.classList.remove('hidden');
-          stampEl.textContent = owner.icon;
+          stampEl.innerHTML = '<span class="stamp-dot" style="background:' + owner.color + '"></span>';
           stampEl.title = 'ملك: ' + owner.name;
         }
       } else {
@@ -603,18 +722,25 @@
         tileEl.style.removeProperty('--owner-tint');
         if (stampEl) {
           stampEl.classList.add('hidden');
-          stampEl.textContent = '';
+          stampEl.innerHTML = '';
         }
       }
 
       if (barEl) {
         barEl.classList.toggle('has-buildings', prop.houses > 0);
+        const houseSpan = document.getElementById('tileHouses_' + tid);
+        let hText = '';
         if (prop.houses === 5) {
-          barEl.textContent = '🏨';
-        } else if (prop.houses > 0) {
-          barEl.textContent = '🏠'.repeat(prop.houses);
+          hText = '🏢';
+        } else if (prop.houses > 1) {
+          hText = '🏠 x ' + prop.houses;
+        } else if (prop.houses === 1) {
+          hText = '🏠';
+        }
+        if (houseSpan) {
+          houseSpan.textContent = hText;
         } else {
-          barEl.textContent = '';
+          barEl.textContent = hText;
         }
       }
     });
@@ -657,8 +783,8 @@
 
     // Mobile Top Summary
     if (me) {
-      els.mobileMyAvatar.textContent = me.icon;
-      els.mobileMyAvatar.style.background = me.color;
+      els.mobileMyAvatar.innerHTML = renderRichupAvatar(me.color, 'xs');
+      els.mobileMyAvatar.style.background = 'transparent';
       els.mobileMyName.textContent = me.name;
       els.mobileMyCash.textContent = me.bankrupt ? 'خاسر / مفلس 🏳️' : formatSignedCash(me.cash);
       els.mobileMyCash.classList.toggle('is-negative-cash', Boolean(!me.bankrupt && me.cash < 0));
@@ -881,7 +1007,7 @@
         '<div class="player-card ' + (isTurn ? 'active-turn ' : '') + (p.bankrupt ? 'is-bankrupt' : '') + '">' +
         '<div class="pc-top">' +
         '<div class="pc-ident">' +
-        '<div class="pc-avatar" style="background:' + p.color + '">' + p.icon + '</div>' +
+        renderRichupAvatar(p.color, 'sm') +
         '<div>' +
         '<div class="pc-name">' + escapeHtml(p.name) + '</div>' +
         '<small style="color:#94a3b8;font-size:0.74rem">صافي الثروة: ' + formatSignedCash(p.netWorth) + '</small>' +
@@ -899,6 +1025,34 @@
         '</div>'
       );
     }).join('');
+
+    if (els.underBoardPlayers) {
+      els.underBoardPlayers.innerHTML = state.players.map(function (p) {
+        const isTurn = current && current.id === p.id && !p.bankrupt;
+        const isHost = p.id === state.hostId;
+        const isMe = p.id === ui.myPlayerId;
+        const cashClass = (!p.bankrupt && p.cash < 0) ? 'under-player-cash negative' : 'under-player-cash';
+        const cashText = p.bankrupt ? 'خسر 🏳️' : formatSignedCash(p.cash);
+
+        return (
+          '<div class="under-player-card ' + (isTurn ? 'active-turn ' : '') + (p.bankrupt ? 'is-bankrupt' : '') + '">' +
+          '<div class="under-player-left">' +
+          renderRichupAvatar(p.color, 'sm') +
+          '<div class="under-player-info">' +
+          '<div class="under-player-name">' +
+          escapeHtml(p.name) +
+          (isHost ? ' 👑' : '') +
+          (isMe ? ' <span class="me-pill">أنت</span>' : '') +
+          '</div>' +
+          (isTurn ? '<div class="under-player-status turn">🎯 دوره الآن</div>' : '') +
+          (p.inJail ? '<div class="under-player-status jail">⛓️ في السجن</div>' : '') +
+          '</div>' +
+          '</div>' +
+          '<div class="' + cashClass + '" style="direction:ltr">' + cashText + '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }
   }
 
   function renderMyAssetsPanel(state) {
@@ -913,53 +1067,94 @@
         '<div style="text-align:center;color:#94a3b8;padding:24px 10px;font-size:0.9rem">' +
         'لا تملك أي محافظات أو مرافق بعد. ارمِ النرد واشترِ أول محافظة لك!' +
         '</div>';
-      return;
+    } else {
+      const isMyTurn = state.players[state.currentTurnIndex] && state.players[state.currentTurnIndex].id === ui.myPlayerId;
+
+      els.myAssetsList.innerHTML = myPropIds.map(function (tid) {
+        const tile = BOARD_TILES[tid];
+        const prop = state.properties[tid];
+        const barColor = tile.group ? COLOR_GROUPS[tile.group].color : (tile.type === 'station' ? '#475569' : '#0f766e');
+        const statusText = prop.mortgaged
+          ? 'مرهون للبنك ⚠️'
+          : (prop.houses === 5 ? 'فندق سياحي 🏨' : (prop.houses > 0 ? ('منازل: ' + prop.houses + ' 🏠') : 'أرض فضاء'));
+
+        const baseRentInfo = tile.rent
+          ? ('الإيجار الحالي: ' + formatMoney(prop.houses > 0 ? tile.rent[prop.houses] : tile.rent[0]))
+          : ('السعر: ' + formatMoney(tile.price));
+
+        let btns = '<button class="btn btn-outline btn-sm" data-tile-jump="' + tid + '" type="button">📄 تفاصيل العقد</button>';
+
+        if (tile.type === 'property' && isMyTurn && !prop.mortgaged && prop.houses < 5) {
+          btns += '<button class="btn btn-emerald btn-sm" data-build-tile="' + tid + '" type="button">+ بناء (' + tile.houseCost + ')</button>';
+        }
+        if (tile.type === 'property' && prop.houses > 0) {
+          btns += '<button class="btn btn-danger-outline btn-sm" data-sell-tile="' + tid + '" type="button">- بيع مبنى (+' + Math.floor(tile.houseCost / 2) + ')</button>';
+        }
+        if (!prop.mortgaged && prop.houses === 0) {
+          const mortVal = Math.floor(tile.price / 2);
+          btns += '<button class="btn btn-outline btn-sm" data-mort-tile="' + tid + '" type="button">رهن (+' + mortVal + ')</button>';
+        } else if (prop.mortgaged) {
+          const unmortCost = Math.ceil((tile.price / 2) * 1.1);
+          btns += '<button class="btn btn-gold btn-sm" data-unmort-tile="' + tid + '" type="button">فك رهن (-' + unmortCost + ')</button>';
+        }
+
+        return (
+          '<div class="asset-item">' +
+          '<div class="asset-bar" style="background:' + barColor + '"></div>' +
+          '<div class="asset-content">' +
+          '<div class="asset-head" data-tile-jump="' + tid + '">' +
+          '<span>' + tile.icon + ' ' + escapeHtml(tile.name) + '</span>' +
+          '<span style="color:#ffd166;font-size:0.82rem">' + statusText + '</span>' +
+          '</div>' +
+          '<div class="asset-sub">' + escapeHtml(baseRentInfo) + (tile.subtitle ? ' • ' + escapeHtml(tile.subtitle) : '') + '</div>' +
+          '<div class="asset-btns">' + btns + '</div>' +
+          '</div>' +
+          '</div>'
+        );
+      }).join('');
     }
 
-    const isMyTurn = state.players[state.currentTurnIndex] && state.players[state.currentTurnIndex].id === ui.myPlayerId;
+    if (els.underPropsList) {
+      if (els.underPropsCount) els.underPropsCount.textContent = String(myPropIds.length);
+      if (myPropIds.length === 0) {
+        els.underPropsList.innerHTML =
+          '<div style="text-align:center;color:#94a3b8;padding:12px;font-size:0.84rem">' +
+          'لا تملك أي مدن بعد. ارمِ النرد واشترِ أول مدينة لك!' +
+          '</div>';
+      } else {
+        els.underPropsList.innerHTML = myPropIds.map(function (tid) {
+          const tile = BOARD_TILES[tid];
+          const prop = state.properties[tid];
+          const barColor = tile.group ? COLOR_GROUPS[tile.group].color : (tile.type === 'station' ? '#38bdf8' : '#0f766e');
+          let houseBadge = '';
+          if (prop.houses === 5) {
+            houseBadge = '🏢 فندق';
+          } else if (prop.houses > 0) {
+            houseBadge = '🏠 × ' + prop.houses;
+          } else if (prop.mortgaged) {
+            houseBadge = '⚠️ مرهون';
+          } else {
+            houseBadge = 'أرض فضاء';
+          }
 
-    els.myAssetsList.innerHTML = myPropIds.map(function (tid) {
-      const tile = BOARD_TILES[tid];
-      const prop = state.properties[tid];
-      const barColor = tile.group ? COLOR_GROUPS[tile.group].color : (tile.type === 'station' ? '#475569' : '#0f766e');
-      const statusText = prop.mortgaged
-        ? 'مرهون للبنك ⚠️'
-        : (prop.houses === 5 ? 'فندق سياحي 🏨' : (prop.houses > 0 ? ('منازل: ' + prop.houses + ' 🏠') : 'أرض فضاء'));
+          return (
+            '<div class="under-prop-row" data-tile-jump="' + tid + '" style="--prop-bar-color:' + barColor + '">' +
+            '<div class="under-prop-ident">' +
+            '<span class="under-prop-flag">' + (tile.flag || tile.icon || '📍') + '</span>' +
+            '<span>' + escapeHtml(tile.name) + (tile.country ? (' <small style="color:#94a3b8;font-size:0.75rem">(' + escapeHtml(tile.country) + ')</small>') : '') + '</span>' +
+            '</div>' +
+            '<div class="under-prop-status">' + houseBadge + '</div>' +
+            '</div>'
+          );
+        }).join('');
 
-      const baseRentInfo = tile.rent
-        ? ('الإيجار الحالي: ' + formatMoney(prop.houses > 0 ? tile.rent[prop.houses] : tile.rent[0]))
-        : ('السعر: ' + formatMoney(tile.price));
-
-      let btns = '<button class="btn btn-outline btn-sm" data-tile-jump="' + tid + '" type="button">📄 تفاصيل العقد</button>';
-
-      if (tile.type === 'property' && isMyTurn && !prop.mortgaged && prop.houses < 5) {
-        btns += '<button class="btn btn-emerald btn-sm" data-build-tile="' + tid + '" type="button">+ بناء (' + tile.houseCost + ')</button>';
+        els.underPropsList.querySelectorAll('.under-prop-row').forEach(function (row) {
+          row.addEventListener('click', function () {
+            openTileModal(Number(row.dataset.tileJump));
+          });
+        });
       }
-      if (tile.type === 'property' && prop.houses > 0) {
-        btns += '<button class="btn btn-danger-outline btn-sm" data-sell-tile="' + tid + '" type="button">- بيع مبنى (+' + Math.floor(tile.houseCost / 2) + ')</button>';
-      }
-      if (!prop.mortgaged && prop.houses === 0) {
-        const mortVal = Math.floor(tile.price / 2);
-        btns += '<button class="btn btn-outline btn-sm" data-mort-tile="' + tid + '" type="button">رهن (+' + mortVal + ')</button>';
-      } else if (prop.mortgaged) {
-        const unmortCost = Math.ceil((tile.price / 2) * 1.1);
-        btns += '<button class="btn btn-gold btn-sm" data-unmort-tile="' + tid + '" type="button">فك رهن (-' + unmortCost + ')</button>';
-      }
-
-      return (
-        '<div class="asset-item">' +
-        '<div class="asset-bar" style="background:' + barColor + '"></div>' +
-        '<div class="asset-content">' +
-        '<div class="asset-head" data-tile-jump="' + tid + '">' +
-        '<span>' + tile.icon + ' ' + escapeHtml(tile.name) + '</span>' +
-        '<span style="color:#ffd166;font-size:0.82rem">' + statusText + '</span>' +
-        '</div>' +
-        '<div class="asset-sub">' + escapeHtml(baseRentInfo) + (tile.subtitle ? ' • ' + escapeHtml(tile.subtitle) : '') + '</div>' +
-        '<div class="asset-btns">' + btns + '</div>' +
-        '</div>' +
-        '</div>'
-      );
-    }).join('');
+    }
   }
 
   // ==================== Active Trades, Counter-Offers, Logs & Chat ====================
@@ -1068,6 +1263,28 @@
       return '<div class="log-entry ' + escapeHtml(lg.type) + '">' + escapeHtml(lg.text) + '</div>';
     }).join('');
 
+    if (els.centerLiveFeed) {
+      const recent = (state.logs || []).slice(0, 5).reverse();
+      els.centerLiveFeed.innerHTML = recent.map(function (lg) {
+        let pColor = '#38bdf8';
+        if (state.players) {
+          for (let i = 0; i < state.players.length; i++) {
+            if (lg.text.indexOf(state.players[i].name) !== -1) {
+              pColor = state.players[i].color;
+              break;
+            }
+          }
+        }
+        return (
+          '<div class="feed-entry">' +
+          '<span class="feed-dot" style="background:' + pColor + '; box-shadow: 0 0 6px ' + pColor + ';"></span>' +
+          '<span class="feed-text">' + escapeHtml(lg.text) + '</span>' +
+          '</div>'
+        );
+      }).join('');
+      els.centerLiveFeed.scrollTop = els.centerLiveFeed.scrollHeight;
+    }
+
     const chatArr = state.chat || [];
     if (chatArr.length > ui.lastChatCount) {
       const added = chatArr.length - ui.lastChatCount;
@@ -1085,6 +1302,10 @@
     els.unreadChatBadge.classList.toggle('hidden', ui.unreadChat === 0);
     els.mobChatBadge.textContent = String(ui.unreadChat);
     els.mobChatBadge.classList.toggle('hidden', ui.unreadChat === 0);
+    if (els.floatingChatBadge) {
+      els.floatingChatBadge.textContent = String(ui.unreadChat);
+      els.floatingChatBadge.classList.toggle('hidden', ui.unreadChat === 0);
+    }
 
     els.chatMessages.innerHTML = chatArr.length === 0
       ? '<div style="text-align:center;color:#94a3b8;padding:18px;font-size:0.8rem">ابدأ الدردشة مع أصدقائك في الغرفة! 💬</div>'
@@ -1130,9 +1351,10 @@
       groupLabel = 'مرفق خدمات عامة';
     }
 
+    let emblemHtml = tile.flagSvg || ('<span class="deed-emblem">' + (tile.flag || tile.icon) + '</span>');
     let bodyHtml =
       '<div class="deed-header" style="background:' + headerBg + ';color:' + headerColor + '">' +
-      '<span class="deed-emblem">' + tile.icon + '</span>' +
+      '<div class="deed-emblem-wrap">' + emblemHtml + '</div>' +
       '<div style="font-size:0.8rem;font-weight:800;opacity:0.92">' + escapeHtml(groupLabel) + '</div>' +
       '<h3>' + escapeHtml(tile.name) + '</h3>' +
       (tile.subtitle ? '<div style="font-size:0.86rem;opacity:0.95;margin-top:2px">' + escapeHtml(tile.subtitle) + '</div>' : '') +
@@ -1143,7 +1365,7 @@
         '<div class="deed-owner-pill">' +
         '<span>سعر الشراء: <strong>' + formatMoney(tile.price) + '</strong></span>' +
         '<span>المالك: <strong style="color:' + (owner ? owner.color : '#94a3b8') + '">' +
-        (owner ? (owner.icon + ' ' + escapeHtml(owner.name)) : 'البنك (متاح للشراء)') +
+        (owner ? (renderRichupAvatar(owner.color, 'xs') + ' ' + escapeHtml(owner.name)) : 'البنك (متاح للشراء)') +
         '</strong></span>' +
         '</div>';
 
@@ -1166,10 +1388,10 @@
       } else if (tile.type === 'station') {
         bodyHtml +=
           '<table class="rent-table">' +
-          '<tr><td>امتلاك محطة واحدة</td><td>250 ج.م</td></tr>' +
-          '<tr><td>امتلاك محطتين</td><td>500 ج.م</td></tr>' +
-          '<tr><td>امتلاك 3 محطات</td><td>1,000 ج.م</td></tr>' +
-          '<tr><td>امتلاك الـ 4 محطات كاملة</td><td>2,000 ج.م</td></tr>' +
+          '<tr><td>امتلاك مطار واحد</td><td>25$</td></tr>' +
+          '<tr><td>امتلاك مطارين</td><td>50$</td></tr>' +
+          '<tr><td>امتلاك 3 مطارات</td><td>100$</td></tr>' +
+          '<tr><td>امتلاك الـ 4 مطارات كاملة</td><td>200$</td></tr>' +
           '</table>';
       } else if (tile.type === 'utility') {
         bodyHtml +=
@@ -1177,31 +1399,45 @@
       }
 
       if (state && prop && prop.ownerId === ui.myPlayerId) {
-        const isMyTurn = state.players[state.currentTurnIndex] && state.players[state.currentTurnIndex].id === ui.myPlayerId;
         bodyHtml += '<div class="deed-controls">';
-        if (tile.type === 'property' && !prop.mortgaged && prop.houses < 5) {
-          bodyHtml +=
-            '<button class="btn btn-emerald full-width" data-build-tile="' + tile.id + '" type="button" ' + (!isMyTurn ? 'disabled' : '') + '>' +
-            (prop.houses === 4 ? '🏨 تشييد فندق سياحي' : '🏠 بناء منزل جديد') + ' (' + formatMoney(tile.houseCost) + ')' +
-            '</button>';
-        }
-        if (tile.type === 'property' && prop.houses > 0) {
-          bodyHtml +=
-            '<button class="btn btn-danger-outline full-width" data-sell-tile="' + tile.id + '" type="button">' +
-            'بيع مبنى واسترداد ' + formatMoney(Math.floor(tile.houseCost / 2)) +
-            '</button>';
-        }
-        if (!prop.mortgaged && prop.houses === 0) {
-          bodyHtml +=
-            '<button class="btn btn-outline full-width" data-mort-tile="' + tile.id + '" type="button">' +
-            'رهن العقار للبنك (+' + formatMoney(Math.floor(tile.price / 2)) + ')' +
-            '</button>';
-        } else if (prop.mortgaged) {
-          const unmortCost = Math.ceil((tile.price / 2) * 1.1);
-          bodyHtml +=
-            '<button class="btn btn-gold full-width" data-unmort-tile="' + tile.id + '" type="button">' +
-            'فك الرهن العقاري (-' + formatMoney(unmortCost) + ')' +
-            '</button>';
+        if (tile.type === 'property') {
+          const groupTiles = BOARD_TILES.filter(function (t) { return t.group === tile.group; });
+          const ownedCount = groupTiles.filter(function (t) {
+            return state.properties[t.id] && state.properties[t.id].ownerId === ui.myPlayerId;
+          }).length;
+          const isMonopoly = (ownedCount === groupTiles.length);
+          const myPlayer = state.players.find(function (p) { return p.id === ui.myPlayerId; });
+          const canAfford = myPlayer && myPlayer.cash >= tile.houseCost;
+
+          if (isMonopoly && !prop.mortgaged && prop.houses < 5) {
+            bodyHtml +=
+              '<button class="btn btn-emerald full-width btn-lg" data-build-tile="' + tile.id + '" type="button" ' + (canAfford ? '' : 'disabled') + '>' +
+              (prop.houses === 4 ? '🏨 تشييد فندق سياحي' : '🏠 بناء وتطوير منزل جديد') + ' (' + formatMoney(tile.houseCost) + ')' +
+              '</button>';
+          } else if (!isMonopoly && prop.houses < 5) {
+            bodyHtml +=
+              '<div class="deed-monopoly-notice">' +
+              '🔒 لتطوير وبناء منازل في هذه المحافظة، يجب امتلاك جميع محافظات ' + escapeHtml(groupLabel) + ' كاملة (' + ownedCount + '/' + groupTiles.length + ')!' +
+              '</div>';
+          }
+          if (prop.houses > 0) {
+            bodyHtml +=
+              '<button class="btn btn-danger-outline full-width" data-sell-tile="' + tile.id + '" type="button" style="margin-top:6px;">' +
+              'بيع مبنى واسترداد ' + formatMoney(Math.floor(tile.houseCost / 2)) +
+              '</button>';
+          }
+          if (!prop.mortgaged && prop.houses === 0) {
+            bodyHtml +=
+              '<button class="btn btn-outline full-width" data-mort-tile="' + tile.id + '" type="button" style="margin-top:6px;">' +
+              'رهن العقار للبنك (+' + formatMoney(Math.floor(tile.price / 2)) + ')' +
+              '</button>';
+          } else if (prop.mortgaged) {
+            const unmortCost = Math.ceil((tile.price / 2) * 1.1);
+            bodyHtml +=
+              '<button class="btn btn-gold full-width" data-unmort-tile="' + tile.id + '" type="button" style="margin-top:6px;">' +
+              'فك الرهن العقاري (-' + formatMoney(unmortCost) + ')' +
+              '</button>';
+          }
         }
         bodyHtml += '</div>';
       } else if (state && owner && owner.id !== ui.myPlayerId && !owner.bankrupt) {
@@ -1211,6 +1447,19 @@
           '🤝 اطلب شراء "' + escapeHtml(tile.name) + '" في صفقة مع ' + escapeHtml(owner.name) +
           '</button>' +
           '</div>';
+      } else if (state && !owner && isPurchasable(tile)) {
+        const curPlayer = state.players[state.currentTurnIndex];
+        const isMyTurn = curPlayer && curPlayer.id === ui.myPlayerId;
+        const isLandedHere = isMyTurn && curPlayer.position === tile.id && state.turnPhase === 'BUY_DECISION';
+        if (isLandedHere) {
+          const canAfford = curPlayer.cash >= tile.price;
+          bodyHtml +=
+            '<div class="deed-controls">' +
+            '<button class="btn btn-emerald full-width btn-lg" id="deedBuyNowBtn" type="button" ' + (canAfford ? '' : 'disabled') + '>' +
+            '🛒 شراء هذه المحافظة الآن (' + formatMoney(tile.price) + ')' +
+            '</button>' +
+            '</div>';
+        }
       }
     } else {
       bodyHtml +=
@@ -1307,7 +1556,7 @@
         '<label class="trade-prop-card' + (isChecked ? ' checked' : '') + '">' +
         '<input type="checkbox" name="' + inputName + '" value="' + tid + '" ' + (isChecked ? 'checked' : '') + ' />' +
         '<span class="tpc-bar" style="background:' + barColor + '"></span>' +
-        '<span class="tpc-title">' + tile.icon + ' ' + escapeHtml(tile.name) + '</span>' +
+        '<span class="tpc-title">' + (tile.flag || tile.icon) + ' ' + escapeHtml(tile.name) + '</span>' +
         '<span class="tpc-price">' + formatMoney(tile.price) + (prop.mortgaged ? ' • مرهون' : '') + '</span>' +
         '</label>'
       );
@@ -1659,9 +1908,33 @@
     }
 
     els.leaveRoomBtn.addEventListener('click', function () {
-      if (window.confirm('هل تريد مغادرة الغرفة الحالية؟')) {
-        exitToHome();
+      // إذا كانت أي قائمة جانبية أو نافذة مفتوحة على الهاتف، الخروج يرجعك لساحة اللعب مباشرة ولا يخرجك للرئيسية
+      if (els.drawerPlayers && els.drawerPlayers.classList.contains('mobile-open')) {
+        setMobileView('board');
+        return;
       }
+      if (els.drawerSocial && els.drawerSocial.classList.contains('mobile-open')) {
+        setMobileView('board');
+        return;
+      }
+      if (els.tileModal && !els.tileModal.classList.contains('hidden')) {
+        els.tileModal.classList.add('hidden');
+        return;
+      }
+      if (els.tradeModal && !els.tradeModal.classList.contains('hidden')) {
+        els.tradeModal.classList.add('hidden');
+        return;
+      }
+
+      if (ui.state && ui.state.status === 'PLAYING') {
+        const ok = window.confirm(
+          'أنت الآن في منتصف مباراة بنك الحظ!\n\nهل تريد الخروج مؤقتاً إلى القائمة الرئيسية؟ (ستظل محتفظاً بمكانك وأموالك وعقاراتك، ويمكنك العودة للمباراة فوراً بمجرد فتح اللعبة).'
+        );
+        if (!ok) return;
+      } else {
+        if (!window.confirm('هل تريد مغادرة الغرفة والعودة للقائمة الرئيسية؟')) return;
+      }
+      exitToHome();
     });
     els.winnerExitBtn.addEventListener('click', exitToHome);
 
@@ -1700,6 +1973,43 @@
     }
     if (els.hostFinishGameSideBtn) {
       els.hostFinishGameSideBtn.addEventListener('click', handleHostFinishByWealth);
+    }
+
+    // Richup Quick Action Buttons (Under Board & Floating Chat)
+    if (els.underBoardBankruptBtn) {
+      els.underBoardBankruptBtn.addEventListener('click', function () {
+        if (!ui.state) return;
+        const me = ui.state.players.find(function (p) { return p.id === ui.myPlayerId; });
+        if (!me || me.bankrupt) return;
+        if (window.confirm('هل أنت متأكد من إعلان إفلاسك والانسحاب من المباراة؟')) {
+          AudioFX.bankrupt();
+          dispatchGameAction({ type: 'BANKRUPT', targetId: ui.myPlayerId });
+        }
+      });
+    }
+
+    if (els.underBoardTradesBtn) {
+      els.underBoardTradesBtn.addEventListener('click', function () {
+        AudioFX.click();
+        openTradeModal();
+      });
+    }
+
+    if (els.floatingChatBtn) {
+      els.floatingChatBtn.addEventListener('click', function () {
+        AudioFX.click();
+        if (els.drawerSocial) {
+          const isOpen = els.drawerSocial.classList.contains('chat-open');
+          if (isOpen) {
+            els.drawerSocial.classList.remove('chat-open');
+          } else {
+            els.drawerSocial.classList.add('chat-open');
+            activateLeftSubtab('chat');
+            const chatIn = document.getElementById('chatInput');
+            if (chatIn) chatIn.focus();
+          }
+        }
+      });
     }
 
     // Board Zoom Toggle (Mobile)
@@ -1758,6 +2068,7 @@
 
       const closeDrawer = ev.target.closest('[data-close-drawer]');
       if (closeDrawer) {
+        if (els.drawerSocial) els.drawerSocial.classList.remove('chat-open');
         setMobileView('board');
         return;
       }
@@ -1780,15 +2091,38 @@
 
       const buildBtn = ev.target.closest('[data-build-tile]');
       if (buildBtn) {
-        dispatchGameAction({ type: 'BUILD_HOUSE', tileId: Number(buildBtn.dataset.buildTile) }).then(function (r) {
-          if (r && r.ok) AudioFX.buy();
+        const tid = Number(buildBtn.dataset.buildTile);
+        dispatchGameAction({ type: 'BUILD_HOUSE', tileId: tid }).then(function (r) {
+          if (r && r.ok) {
+            AudioFX.buy();
+            if (ui.openTileModalId !== null && els.tileModal && !els.tileModal.classList.contains('hidden')) {
+              openTileModal(ui.openTileModalId);
+            }
+          }
         });
         return;
       }
 
       const sellBtn = ev.target.closest('[data-sell-tile]');
       if (sellBtn) {
-        dispatchGameAction({ type: 'SELL_HOUSE', tileId: Number(sellBtn.dataset.sellTile) });
+        const tid = Number(sellBtn.dataset.sellTile);
+        dispatchGameAction({ type: 'SELL_HOUSE', tileId: tid }).then(function (r) {
+          if (r && r.ok) {
+            AudioFX.click();
+            if (ui.openTileModalId !== null && els.tileModal && !els.tileModal.classList.contains('hidden')) {
+              openTileModal(ui.openTileModalId);
+            }
+          }
+        });
+        return;
+      }
+
+      const buyFromDeed = ev.target.closest('#deedBuyNowBtn');
+      if (buyFromDeed) {
+        els.tileModal.classList.add('hidden');
+        dispatchGameAction({ type: 'BUY_PROPERTY' }).then(function (r) {
+          if (r && r.ok) AudioFX.buy();
+        });
         return;
       }
 
@@ -1920,50 +2254,137 @@
       layoutAllTokensStatic(ui.state);
       if (Ads) Ads.refresh();
     });
+
+    // حماية زر الرجوع وسحب الشاشة على الهاتف لكي يرجع اللاعب لساحة اللعب ولا يخرجه من الجيم
+    try {
+      window.history.pushState({ inGame: true }, '');
+    } catch (_e) { }
+
+    window.addEventListener('popstate', function () {
+      if (els.tileModal && !els.tileModal.classList.contains('hidden')) {
+        els.tileModal.classList.add('hidden');
+        window.history.pushState({ inGame: true }, '');
+        return;
+      }
+      if (els.tradeModal && !els.tradeModal.classList.contains('hidden')) {
+        els.tradeModal.classList.add('hidden');
+        window.history.pushState({ inGame: true }, '');
+        return;
+      }
+      if (ui.activeMobileView !== 'board') {
+        setMobileView('board');
+        window.history.pushState({ inGame: true }, '');
+        return;
+      }
+      if (ui.state && (ui.state.status === 'PLAYING' || ui.state.status === 'LOBBY')) {
+        window.history.pushState({ inGame: true }, '');
+      }
+    });
+
+    // استعادة ومزامنة اللعبة فوراً عند العودة إلى المتصفح أو فتح قفل شاشة الهاتف
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && ui.roomCode && ui.myPlayerId) {
+        Network.sendAction({ type: 'PING' }).catch(function () {});
+      }
+    });
+
+    window.addEventListener('focus', function () {
+      if (ui.roomCode && ui.myPlayerId) {
+        Network.sendAction({ type: 'PING' }).catch(function () {});
+      }
+    });
+
+    window.addEventListener('online', function () {
+      if (ui.roomCode && ui.myPlayerId) {
+        showToast('🌐 عاد اتصال الإنترنت! جاري تحديث اللعبة...', 'info');
+        Network.sendAction({ type: 'PING' }).catch(function () {});
+      }
+    });
   }
 
-  // ==================== Startup & URL Invite Handling ====================
-  function checkInviteUrlOnLoad() {
+  // ==================== Startup & Automatic Game Session Reconnection ====================
+  function checkInviteOrRestoreActiveSession() {
     try {
       const savedName = localStorage.getItem('beh_last_name');
-      if (savedName) els.playerNameInput.value = savedName;
+      if (savedName && els.playerNameInput) els.playerNameInput.value = savedName;
     } catch (_e) { }
 
     const params = new URLSearchParams(window.location.search);
-    const roomParam = (params.get('room') || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    if (!roomParam) return;
+    let targetCode = (params.get('room') || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    let session = null;
 
-    els.joinRoomCodeInput.value = roomParam;
+    if (targetCode) {
+      session = loadSession(targetCode);
+    } else {
+      // إذا فتح المتصفح بدون كود غرفة، يتم فحص الجلسة النشطة بالمتصفح لإعادة اللاعب مباشرة
+      const activeRaw = localStorage.getItem('beh_active_session');
+      if (activeRaw) {
+        try {
+          const act = JSON.parse(activeRaw);
+          if (act && act.roomCode && (!act.timestamp || Date.now() - act.timestamp < 12 * 3600 * 1000)) {
+            targetCode = act.roomCode;
+            session = act;
+            window.history.replaceState({}, '', '?room=' + encodeURIComponent(targetCode));
+          }
+        } catch (_e) { }
+      }
+    }
+
+    if (!targetCode) {
+      setScreen('landing');
+      return;
+    }
+
+    els.joinRoomCodeInput.value = targetCode;
+
+    // استعادة اللاعب النشط مباشرة داخل اللعبة بدون إرجاعه لشاشة البداية
+    if (session && (session.sessionToken || session.playerId)) {
+      showToast('🔄 جاري استعادة مكانك في اللعبة مباشرة...', 'info');
+      const pName = (session.playerName || (els.playerNameInput && els.playerNameInput.value.trim()) || 'لاعب').trim();
+      const pAvatar = session.avatarId || ui.selectedAvatarId;
+
+      setTimeout(function () {
+        Network.joinRoom({
+          roomCode: targetCode,
+          playerId: session.playerId,
+          sessionToken: session.sessionToken,
+          playerName: pName,
+          avatarId: pAvatar
+        }).then(function (res) {
+          if (res && res.ok) {
+            ui.myPlayerId = res.playerId;
+            ui.roomCode = res.roomCode;
+            ui.cashInitialized = false;
+            saveSession(res.roomCode, res.playerId, res.sessionToken);
+            handleRoomState(res.state);
+            showToast('🎮 مرحباً بعودتك! تمت إعادتك للمباراة مباشرة.', 'success');
+          } else {
+            clearSession(targetCode);
+            setScreen('landing');
+            if (els.inviteBanner) {
+              els.inviteBanner.classList.remove('hidden');
+              els.inviteBannerTitle.textContent = 'الغرفة #' + targetCode;
+              els.inviteBannerSub.textContent = (res && res.error) || 'انتهت هذه المباراة أو لم تعد متاحة.';
+            }
+          }
+        }).catch(function () {
+          setScreen('landing');
+        });
+      }, 120);
+      return;
+    }
+
+    // زائر جديد عبر رابط دعوة
+    setScreen('landing');
     els.inviteBanner.classList.remove('hidden');
-    els.inviteBannerTitle.textContent = '🎉 أنت مدعو للانضمام إلى الغرفة #' + roomParam;
+    els.inviteBannerTitle.textContent = '🎉 أنت مدعو للانضمام إلى الغرفة #' + targetCode;
 
-    Network.fetchRoomPreview(roomParam).then(function (preview) {
+    Network.fetchRoomPreview(targetCode).then(function (preview) {
       if (preview) {
         els.inviteBannerSub.textContent =
           'مضيف الغرفة: ' + preview.hostName + ' • اللاعبون الحاليون: ' + preview.playerCount + '/' + preview.maxPlayers + ' — اكتب اسمك واضغط انضمام!';
       }
     });
-
-    const existingSession = loadSession(roomParam);
-    if (existingSession && existingSession.sessionToken) {
-      setTimeout(function () {
-        Network.joinRoom({
-          roomCode: roomParam,
-          playerName: els.playerNameInput.value.trim() || 'لاعب',
-          avatarId: ui.selectedAvatarId,
-          sessionToken: existingSession.sessionToken
-        }).then(function (res) {
-          if (res && res.ok) {
-            ui.myPlayerId = res.playerId;
-            ui.roomCode = res.roomCode;
-            handleRoomState(res.state);
-            if (res.reconnected) {
-              showToast('🔄 تمت إعادة اتصالك بالغرفة تلقائياً!', 'success');
-            }
-          }
-        });
-      }, 350);
-    }
   }
 
   function initApp() {
@@ -2010,7 +2431,7 @@
 
     Network.onState(handleRoomState);
     Network.init();
-    checkInviteUrlOnLoad();
+    checkInviteOrRestoreActiveSession();
   }
 
   if (document.readyState === 'loading') {

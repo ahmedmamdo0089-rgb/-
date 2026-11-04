@@ -433,7 +433,7 @@
     }
 
     if (tile.type === 'utility') {
-      const utilities = [12, 28];
+      const utilities = [12, 23];
       const ownedCount = utilities.filter(function (id) {
         return room.properties[id] && room.properties[id].ownerId === prop.ownerId && !room.properties[id].mortgaged;
       }).length;
@@ -802,7 +802,7 @@
     }
 
     if (card.action === 'nearest_utility') {
-      const utilities = [12, 28];
+      const utilities = [12, 23];
       const oldPos = player.position;
       let target = utilities.find(function (u) { return u > oldPos; });
       if (target === undefined) target = utilities[0];
@@ -1097,22 +1097,22 @@
 
   function buildHouse(room, actorId, tileId) {
     if (room.status !== 'PLAYING') return { ok: false, error: 'المباراة ليست نشطة.' };
-    const current = getCurrentPlayer(room);
-    if (!current || current.id !== actorId) {
-      return { ok: false, error: 'يمكنك البناء فقط أثناء دورك.' };
+    const player = getPlayer(room, actorId);
+    if (!player || player.bankrupt) {
+      return { ok: false, error: 'اللاعب غير متاح أو أعلن إفلاسه.' };
     }
     const check = canBuildHouseCheck(room, actorId, tileId);
     if (!check.ok) return check;
 
     const tile = BOARD_TILES[tileId];
     const prop = room.properties[tileId];
-    current.cash -= tile.houseCost;
+    player.cash -= tile.houseCost;
     prop.houses += 1;
 
     if (prop.houses === 5) {
-      addLog(room, '🏨 شيّد ' + current.name + ' فندقاً فاخراً في "' + tile.name + '" مقابل ' + formatMoney(tile.houseCost) + '!', 'buy');
+      addLog(room, '🏨 شيّد ' + player.name + ' فندقاً فاخراً في "' + tile.name + '" مقابل ' + formatMoney(tile.houseCost) + '!', 'buy');
     } else {
-      addLog(room, '🏠 بنى ' + current.name + ' منزلاً (' + prop.houses + '/4) في "' + tile.name + '" مقابل ' + formatMoney(tile.houseCost) + '.', 'buy');
+      addLog(room, '🏠 بنى ' + player.name + ' منزلاً (' + prop.houses + '/4) في "' + tile.name + '" مقابل ' + formatMoney(tile.houseCost) + '.', 'buy');
     }
     room.updatedAt = Date.now();
     return { ok: true };

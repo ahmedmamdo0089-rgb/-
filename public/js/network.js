@@ -6,7 +6,9 @@
   // Verified global MQTT-over-WSS brokers (TCP/TLS WebSocket — bypasses 100% of mobile 4G CGNAT)
   const MQTT_BROKERS = [
     'wss://broker.emqx.io:8084/mqtt',
-    'wss://broker.hivemq.com:8884/mqtt'
+    'wss://broker.hivemq.com:8884/mqtt',
+    'wss://broker.emqx.io/mqtt',
+    'wss://broker.hivemq.com/mqtt'
   ];
 
   const TOPIC_PREFIX = 'beh-egypt-v40/room/';
@@ -367,6 +369,11 @@
       case 'RESPOND_TRADE': return Engine.respondTrade(room, actorId, actionPayload);
       case 'CANCEL_TRADE': return Engine.cancelTrade(room, actorId, actionPayload.tradeId);
       case 'CHAT': return Engine.addChatMessage(room, actorId, actionPayload.text);
+      case 'PING': {
+        const p = room.players.find(function (pl) { return pl.id === actorId; });
+        if (p) p.connected = true;
+        return { ok: true };
+      }
       default: return { ok: false, error: 'أمر غير مدعوم.' };
     }
   }
@@ -597,6 +604,18 @@
         let token = p.sessionToken;
         if (token && hostSessions[token]) {
           existingPlayerId = hostSessions[token];
+        }
+        if (!existingPlayerId && p.playerId) {
+          const foundById = hostRoom.players.find(function (pl) { return pl.id === p.playerId; });
+          if (foundById) existingPlayerId = foundById.id;
+        }
+        if (!existingPlayerId && p.playerName) {
+          const cleanName = String(p.playerName).trim().toLowerCase();
+          const foundByName = hostRoom.players.find(function (pl) { return pl.name.trim().toLowerCase() === cleanName; });
+          if (foundByName) existingPlayerId = foundByName.id;
+        }
+        if (existingPlayerId && token) {
+          hostSessions[token] = existingPlayerId;
         }
 
         const joined = Engine.joinRoom(hostRoom, {
@@ -1333,6 +1352,7 @@
           roomCode: code,
           playerName: payload.playerName,
           avatarId: payload.avatarId,
+          playerId: payload.playerId,
           sessionToken: payload.sessionToken
         }, 8000);
         if (res && res.ok) {
@@ -1358,6 +1378,15 @@
       let existingPlayerId = null;
       if (payload.sessionToken && payload.sessionToken.indexOf('local_') === 0) {
         existingPlayerId = payload.sessionToken.replace('local_', '');
+      }
+      if (!existingPlayerId && payload.playerId) {
+        const foundById = room.players.find(function (p) { return p.id === payload.playerId; });
+        if (foundById) existingPlayerId = foundById.id;
+      }
+      if (!existingPlayerId && payload.playerName) {
+        const cleanName = String(payload.playerName).trim().toLowerCase();
+        const foundByName = room.players.find(function (p) { return p.name.trim().toLowerCase() === cleanName; });
+        if (foundByName) existingPlayerId = foundByName.id;
       }
       const res = Engine.joinRoom(room, {
         playerName: payload.playerName,
