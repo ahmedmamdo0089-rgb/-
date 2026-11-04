@@ -704,74 +704,21 @@ button, input, select {
 
 .game-layout {
   flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 8px 12px;
+  display: grid;
+  grid-template-columns: 316px minmax(0, 1fr) 295px;
+  gap: 10px;
+  padding: 10px;
   height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.desktop-side-ad {
-  flex: 0 0 280px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: sticky;
-  top: 12px;
-}
-
-@media (max-width: 1280px) {
-  .desktop-side-ad {
-    display: none !important;
-  }
+  overflow: hidden;
 }
 
 .side-panel {
-  background: #181427;
-  border: 1.5px solid #3c335e;
+  background: rgba(16, 27, 55, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.11);
   border-radius: 16px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.side-panel.panel-players {
-  display: none !important;
-}
-
-.side-panel.panel-social {
-  position: fixed;
-  bottom: 86px;
-  right: 22px;
-  width: min(390px, calc(100vw - 28px));
-  height: 520px;
-  max-height: calc(100vh - 110px);
-  background: #181427;
-  border: 1.5px solid #3c335e;
-  border-radius: 16px;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.75);
-  z-index: 210;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s;
-}
-
-.side-panel.panel-social:not(.chat-open) {
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(20px) scale(0.95);
-  pointer-events: none;
-}
-
-.side-panel.panel-social.chat-open {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0) scale(1);
-  pointer-events: auto;
 }
 
 .subtabs {
@@ -1001,45 +948,38 @@ button, input, select {
 /* ==================== ساحة الخريطة المربعة 11×11 ==================== */
 .board-stage {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  overflow-y: auto;
-  overflow-x: hidden;
+  justify-content: center;
+  overflow: hidden;
   position: relative;
-  width: 100%;
-  height: 100%;
-  padding: 4px;
 }
 
 .board-scroll-wrapper {
   width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: visible;
-  flex-shrink: 0;
+  overflow: auto;
 }
 
 .board-grid {
   direction: ltr; /* لضمان تطابق إحداثيات الشبكة 1..11 في جميع المتصفحات */
   aspect-ratio: 1 / 1;
-  width: min(860px, calc(100vh - var(--topbar-h) - 20px));
-  height: min(860px, calc(100vh - var(--topbar-h) - 20px));
-  max-width: 860px;
+  width: min(100%, calc(100dvh - var(--topbar-h) - 24px));
+  max-width: 840px;
   background: #171325;
   border: 2.5px solid #2e264a;
   border-radius: 14px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.75);
   display: grid;
-  grid-template-columns: 1.25fr repeat(9, 1fr) 1.25fr;
-  grid-template-rows: 1.25fr repeat(9, 1fr) 1.25fr;
+  grid-template-columns: 1.2fr repeat(9, 1fr) 1.2fr;
+  grid-template-rows: 1.2fr repeat(9, 1fr) 1.2fr;
   gap: 2px;
   padding: 3px;
   position: relative;
   -webkit-user-select: none;
   user-select: none;
-  margin: 0 auto;
 }
 
 .board-tile {
@@ -1047,14 +987,14 @@ button, input, select {
   background: var(--board-tile-bg, #201a35);
   color: #f8fafc;
   border: 1px solid #2b2346;
-  border-radius: 6px;
+  border-radius: 4px;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
   text-align: center;
-  padding: 2px 1px 1px 1px;
+  padding: 1px;
   cursor: pointer;
   overflow: hidden;
   transition: transform 0.14s, box-shadow 0.14s, background-color 0.2s;
@@ -1174,76 +1114,43 @@ button, input, select {
 }
 
 .tile-color-bar {
-  display: none !important;
-}
-
-/* توجيه عناصر البطاقة وفقاً للأضلاع الأربعة لمطابقة مكان العلامات الحمراء (الحافة الداخلية نحو النرد) */
-.board-tile.tile-side-top {
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.board-tile.tile-side-bottom {
-  flex-direction: column-reverse;
-  justify-content: space-between;
-}
-
-.board-tile.tile-side-left {
-  flex-direction: row;
-  justify-content: space-between;
-  padding: 2px 3px;
-}
-
-.board-tile.tile-side-right {
-  flex-direction: row-reverse;
-  justify-content: space-between;
-  padding: 2px 3px;
-}
-
-/* الحافة الداخلية المواجهة للنرد لجميع البطاقات (مكان العلامات الحمراء) */
-.tile-inner-edge {
+  width: 100%;
+  height: 7px;
+  min-height: 7px;
+  flex-shrink: 0;
+  border-radius: 2px 2px 0 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  z-index: 2;
+  gap: 1px;
+  font-size: 0.48rem;
+  line-height: 1;
+}
+
+.tile-color-bar.has-buildings {
+  height: 12px;
+  min-height: 12px;
+}
+.tile-bar-houses {
+  font-size: 0.52rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
 .tile-flag-circle {
-  width: clamp(16px, 2.1vw, 24px);
-  height: clamp(16px, 2.1vw, 24px);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+  font-size: clamp(0.68rem, 1.15vw, 1.05rem);
+  line-height: 1;
+  margin: 1px 0;
   flex-shrink: 0;
-}
-
-.tile-flag-circle .flag-svg {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  display: block;
-}
-
-.flag-emoji-fallback {
-  font-size: clamp(0.95rem, 1.8vw, 1.35rem);
-  line-height: 1;
-}
-
-.tile-bar-houses {
-  font-size: clamp(0.48rem, 0.9vw, 0.64rem);
-  font-weight: 800;
-  line-height: 1;
-  color: #ffd700;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
 }
 
 .tile-special-icon {
-  font-size: clamp(0.95rem, 1.8vw, 1.35rem);
+  font-size: clamp(0.68rem, 1.15vw, 1rem);
   line-height: 1;
-  margin: 0;
+  margin: 1px 0;
   flex-shrink: 0;
 }
 .surprise-icon {
@@ -1257,48 +1164,24 @@ button, input, select {
   color: #38bdf8;
 }
 
-.tile-outer-edge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  flex-shrink: 0;
-  gap: 1px;
-}
-
-.tile-side-left .tile-outer-edge,
-.tile-side-right .tile-outer-edge {
-  width: auto;
-}
-
 .tile-name {
   flex: 1 1 auto;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
-  gap: 1px;
-  padding: 0 1px;
-  line-height: 1.05;
-  overflow: hidden;
-}
-
-.tile-main-city {
   font-weight: 800;
-  font-size: clamp(0.46rem, 0.82vw, 0.72rem);
-  color: #f8fafc;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  font-size: clamp(0.42rem, 0.72vw, 0.68rem);
+  line-height: 1.03;
   letter-spacing: -0.15px;
+  color: #f8fafc;
+  padding: 0 1px;
+  overflow-wrap: anywhere;
 }
 
 .tile-price {
   flex-shrink: 0;
-  font-size: clamp(0.44rem, 0.74vw, 0.66rem);
+  font-size: clamp(0.41rem, 0.64vw, 0.6rem);
   font-weight: 800;
   line-height: 1.12;
   color: #cbd5e1;
@@ -1307,46 +1190,6 @@ button, input, select {
   border-radius: 2px;
   padding: 1px 0;
   direction: ltr;
-  text-align: center;
-}
-
-.tile-side-left .tile-price,
-.tile-side-right .tile-price {
-  width: auto;
-  padding: 1px 3px;
-}
-
-.deed-monopoly-notice {
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px dashed rgba(239, 68, 68, 0.45);
-  color: #fca5a5;
-  font-size: 0.84rem;
-  font-weight: 700;
-  padding: 8px 10px;
-  border-radius: 8px;
-  text-align: center;
-  line-height: 1.4;
-  margin-top: 6px;
-}
-
-.deed-emblem-wrap {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.25);
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  margin: 0 auto 6px auto;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
-}
-
-.deed-emblem-wrap .flag-svg {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  display: block;
 }
 
 .board-tile.is-owned .tile-price {
@@ -1472,65 +1315,46 @@ button, input, select {
   direction: rtl;
   grid-row: 2 / 11;
   grid-column: 2 / 11;
-  background: radial-gradient(circle at center, #1b162f 0%, #110d1f 100%);
+  background: radial-gradient(circle at center, #1e1933 0%, #130f22 100%);
   border: 1.5px solid #2d264a;
   border-radius: 10px;
-  padding: clamp(6px, 1.2vw, 14px);
+  padding: clamp(8px, 1.5vw, 18px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
   text-align: center;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .center-live-feed {
   width: 100%;
-  max-width: 380px;
-  max-height: 95px;
-  min-height: 48px;
+  max-width: 340px;
+  max-height: 85px;
   overflow-y: auto;
-  margin-top: 2px;
-  padding: 3px 6px;
-  background: rgba(15, 11, 26, 0.45);
+  margin-top: 5px;
+  padding: 4px 8px;
+  background: rgba(18, 14, 30, 0.6);
   border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   gap: 3px;
   direction: rtl;
-  backdrop-filter: blur(4px);
 }
 .center-live-feed::-webkit-scrollbar {
-  width: 3px;
+  width: 4px;
 }
 .center-live-feed::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  background: #3b335c;
+  border-radius: 4px;
 }
 .feed-entry {
-  font-size: clamp(0.62rem, 1.05vw, 0.74rem);
-  color: #e2e8f0;
+  font-size: clamp(0.68rem, 0.85vw, 0.78rem);
+  color: #cbd5e1;
   line-height: 1.25;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.feed-dot {
-  width: 7px;
-  height: 7px;
-  min-width: 7px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
-.feed-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: center;
 }
 
 /* منطقة ما تحت الرقعة — تصميم Richup.io للجوال والشاشات */
@@ -1957,7 +1781,10 @@ button, input, select {
 }
 
 .board-decks-row {
-  display: none !important;
+  display: flex;
+  justify-content: space-between;
+  width: 92%;
+  pointer-events: none;
 }
 
 .deck-pile {
@@ -2741,70 +2568,42 @@ button, input, select {
 
   /* استغلال أقصى عرض وارتفاع للهاتف لعرض المحافظات والأسعار والأيقونات كاملة وبوضوح تام */
   .board-grid {
-    aspect-ratio: 1 / 1;
-    width: min(99vw, 560px);
-    height: min(99vw, 560px);
-    max-width: 99vw;
+    aspect-ratio: auto;
+    width: 99.2vw;
+    height: min(calc(100dvh - var(--topbar-h) - 108px), 118vw);
+    min-height: 98vw;
     border-width: 2px;
     border-radius: 10px;
     gap: 1.5px;
     padding: 2px;
-    grid-template-columns: 1.22fr repeat(9, 1fr) 1.22fr;
-    grid-template-rows: 1.22fr repeat(9, 1fr) 1.22fr;
-    margin: 0 auto 12px auto;
+    grid-template-columns: 1.12fr repeat(9, 1fr) 1.12fr;
+    grid-template-rows: 1.14fr repeat(9, 1fr) 1.14fr;
   }
 
   .tile-color-bar {
-    display: none !important;
+    height: 6px;
+    min-height: 6px;
+    font-size: 0.42rem;
   }
 
-  .tile-top-header {
-    min-height: 20px;
-    padding-top: 1px;
-    gap: 2px;
+  .tile-color-bar.has-buildings {
+    height: 9px;
+    min-height: 9px;
   }
 
-  .tile-flag-circle {
-    font-size: clamp(0.92rem, 2.8vw, 1.3rem);
-    line-height: 1;
-    margin: 0;
-  }
-
-  .tile-bar-houses {
-    font-size: clamp(0.46rem, 1.6vw, 0.6rem);
-  }
-
-  .tile-special-icon {
-    font-size: clamp(0.92rem, 2.8vw, 1.3rem);
-    line-height: 1;
-    margin: 0;
+  .tile-icon {
+    font-size: clamp(0.5rem, 2.25vw, 0.72rem);
   }
 
   .corner-tile .tile-icon {
-    font-size: clamp(0.82rem, 3.2vw, 1.15rem);
+    font-size: clamp(0.78rem, 3.4vw, 1.1rem);
   }
 
   .tile-name {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5px;
-    padding: 0 1px;
-    line-height: 1.04;
-    overflow: hidden;
-  }
-
-  .tile-main-city {
-    font-size: clamp(0.44rem, 1.65vw, 0.65rem);
-    font-weight: 800;
+    font-size: clamp(0.39rem, 1.72vw, 0.58rem);
+    line-height: 1.02;
     letter-spacing: -0.2px;
-  }
-
-  .tile-sub-country {
-    font-size: clamp(0.34rem, 1.2vw, 0.48rem);
-    font-weight: 700;
+    padding: 0 1px;
   }
 
   .corner-tile .tile-name {
@@ -2812,7 +2611,7 @@ button, input, select {
   }
 
   .tile-price {
-    font-size: clamp(0.42rem, 1.55vw, 0.6rem);
+    font-size: clamp(0.38rem, 1.62vw, 0.54rem);
     padding: 0.5px 0;
   }
 
@@ -2826,37 +2625,18 @@ button, input, select {
   }
 
   .board-center {
-    padding: 4px 5px;
-    gap: 2px;
+    padding: 5px 6px;
+    gap: 3px;
   }
 
   .turn-control-hub {
-    padding: 5px 6px;
+    padding: 7px 8px;
     width: 98%;
   }
 
   .turn-banner {
-    font-size: 0.74rem;
-    margin-bottom: 4px;
-  }
-
-  .center-live-feed {
-    max-height: 72px;
-    min-height: 38px;
-    margin-top: 1px;
-    padding: 2px 4px;
-    gap: 2px;
-  }
-
-  .feed-entry {
-    font-size: clamp(0.56rem, 1.7vw, 0.68rem);
-    gap: 4px;
-  }
-
-  .feed-dot {
-    width: 6px;
-    height: 6px;
-    min-width: 6px;
+    font-size: 0.76rem;
+    margin-bottom: 6px;
   }
 
   /* وضع التكبير الفائق للهواتف الصغيرة */

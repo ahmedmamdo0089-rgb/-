@@ -106,7 +106,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=5.5" />
+  <link rel="stylesheet" href="css/styles.css?v=4.1" />
 </head>
 <body>
   <!-- شريط علوي ثابت -->
@@ -348,16 +348,36 @@
     <div id="incomingTradeBanner" class="incoming-trade-banner hidden"></div>
 
     <div class="game-layout">
-      <!-- مساحة إعلانية جانبية يمين (للكمبيوتر لتعظيم أرباح الإعلانات وتوسيط الرقعة) -->
-      <aside class="desktop-side-ad desktop-side-ad-right">
-        <div class="ad-slot-container ad-slot-sidebar" data-ad-slot-key="sidebar_box" aria-label="إعلان"></div>
-      </aside>
+      <!-- اللوحة اليمنى: اللاعبون وأملاكي -->
+      <aside id="drawerPlayers" class="side-panel panel-players">
+        <div class="mobile-drawer-header">
+          <h3 id="drawerRightTitle">👥 اللاعبون والأملاك</h3>
+          <button class="drawer-close-btn" data-close-drawer type="button">✕</button>
+        </div>
 
-      <!-- لوحة اللاعبين السابقة مخفية تماماً لاستغلال المساحة للرقعة والإعلانات (اللاعبون وأملاكي معروضون بالكامل تحت الرقعة) -->
-      <aside id="drawerPlayers" class="side-panel panel-players hidden-panel" style="display:none !important;" aria-hidden="true">
-        <div id="playersList" class="players-list"></div>
-        <span id="myAssetsCount">0</span>
-        <div id="myAssetsList" class="my-assets-list"></div>
+        <div class="subtabs" id="rightPanelTabs">
+          <button class="subtab active" data-right-tab="players" type="button">👥 اللاعبون</button>
+          <button class="subtab" data-right-tab="assets" type="button">🏛️ أملاكي (<span id="myAssetsCount">0</span>)</button>
+        </div>
+
+        <div id="playersTabContent" class="subtab-body active">
+          <div id="playersList" class="players-list"></div>
+        </div>
+
+        <div id="assetsTabContent" class="subtab-body">
+          <div class="assets-toolbar">
+            <button id="openTradeFromAssetsBtn" class="btn btn-emerald btn-sm full-width" type="button">
+              🤝 فتح نافذة المقايضة مع اللاعبين
+            </button>
+            <button id="hostFinishGameSideBtn" class="btn btn-gold-outline btn-sm full-width hidden" type="button" style="margin-top:6px;">
+              🏁 حسم المباراة وإعلان الفائز بالثروة
+            </button>
+          </div>
+          <div id="myAssetsList" class="my-assets-list"></div>
+        </div>
+
+        <!-- مساحة إعلانية جانبية للكمبيوتر والتابلت -->
+        <div class="ad-slot-container ad-slot-sidebar" data-ad-slot-key="sidebar_box" aria-label="إعلان"></div>
       </aside>
 
       <!-- المنتصف: خريطة بنك الحظ المصري 11×11 -->
@@ -459,25 +479,27 @@
         </div>
       </div>
 
-      <!-- مساحة إعلانية جانبية يسار (للكمبيوتر لتعظيم أرباح الإعلانات) -->
-      <aside class="desktop-side-ad desktop-side-ad-left">
-        <div class="ad-slot-container ad-slot-sidebar" data-ad-slot-key="sidebar_box" aria-label="إعلان"></div>
-      </aside>
-
-      <!-- نافذة الدردشة العائمة والمنبثقة عند الضغط على زر الدردشة الدائري السفلي -->
-      <aside id="drawerSocial" class="side-panel panel-social floating-chat-panel">
+      <!-- اللوحة اليسرى: المقايضات، الدردشة، وسجل الأحداث -->
+      <aside id="drawerSocial" class="side-panel panel-social">
         <div class="mobile-drawer-header">
-          <h3>💬 محادثة اللاعبين</h3>
-          <button class="drawer-close-btn" data-close-drawer type="button" aria-label="إغلاق المحادثة">✕</button>
+          <h3>💬 المقايضات والدردشة</h3>
+          <button class="drawer-close-btn" data-close-drawer type="button">✕</button>
         </div>
 
         <div id="activeTradesBox" class="active-trades-box hidden"></div>
 
-        <div id="logTabContent" class="subtab-body" style="display:none;">
+        <div class="subtabs" id="leftPanelTabs">
+          <button class="subtab active" data-left-tab="log" type="button">📜 الأحداث</button>
+          <button class="subtab" data-left-tab="chat" type="button">
+            💬 الدردشة <span id="unreadChatBadge" class="mini-badge hidden">0</span>
+          </button>
+        </div>
+
+        <div id="logTabContent" class="subtab-body active">
           <div id="eventLogs" class="event-logs"></div>
         </div>
 
-        <div id="chatTabContent" class="subtab-body chat-body active">
+        <div id="chatTabContent" class="subtab-body chat-body">
           <div id="chatMessages" class="chat-messages"></div>
           <div class="quick-reactions">
             <button class="chip-btn" data-quick-chat="مبروك يا معلم! 🎉" type="button">مبروك 🎉</button>
@@ -618,12 +640,12 @@
 
   <!-- تحميل Socket.io (عند تشغيل خادم Node.js) + محرك الغرف السحابية العالمي v5.0 + مدير الإعلانات المفعّل -->
   <script src="/socket.io/socket.io.js" onerror="window.__NO_SOCKET_IO__=true"></script>
-  <script src="js/shared/gameData.js?v=5.5"></script>
-  <script src="js/shared/gameEngine.js?v=5.5"></script>
-  <script src="js/audio.js?v=5.5"></script>
-  <script src="js/ads.js?v=5.5"></script>
-  <script src="js/network.js?v=5.5"></script>
-  <script src="js/app.js?v=5.5"></script>
+  <script src="js/shared/gameData.js?v=5.0"></script>
+  <script src="js/shared/gameEngine.js?v=5.0"></script>
+  <script src="js/audio.js?v=5.0"></script>
+  <script src="js/ads.js?v=5.0"></script>
+  <script src="js/network.js?v=5.0"></script>
+  <script src="js/app.js?v=5.0"></script>
 </body>
 </html>
 

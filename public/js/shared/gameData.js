@@ -55,7 +55,6 @@
       name: 'سلطنة عُمان',
       country: 'عُمان',
       flag: '🇴🇲',
-      flagSvg: '<svg viewBox="0 0 32 32" class="flag-svg" aria-label="عُمان"><clipPath id="f_om"><circle cx="16" cy="16" r="16"/></clipPath><g clip-path="url(#f_om)"><rect width="32" height="10.7" fill="#ffffff"/><rect y="10.7" width="32" height="10.6" fill="#ce1126"/><rect y="21.3" width="32" height="10.7" fill="#008000"/><rect width="10" height="32" fill="#ce1126"/><circle cx="5" cy="6" r="2" fill="#ffffff"/></g></svg>',
       color: '#92400e',
       textColor: '#ffffff',
       count: 2
@@ -65,7 +64,6 @@
       name: 'المملكة المغربية',
       country: 'المغرب',
       flag: '🇲🇦',
-      flagSvg: '<svg viewBox="0 0 32 32" class="flag-svg" aria-label="المغرب"><circle cx="16" cy="16" r="16" fill="#c1272d"/><polygon points="16,8 18.2,14.5 25,14.5 19.5,18.5 21.5,25 16,21 10.5,25 12.5,18.5 7,14.5 13.8,14.5" fill="none" stroke="#006233" stroke-width="1.8"/></svg>',
       color: '#0284c7',
       textColor: '#ffffff',
       count: 3
@@ -75,7 +73,6 @@
       name: 'المملكة الأردنية',
       country: 'الأردن',
       flag: '🇯🇴',
-      flagSvg: '<svg viewBox="0 0 32 32" class="flag-svg" aria-label="الأردن"><clipPath id="f_jo"><circle cx="16" cy="16" r="16"/></clipPath><g clip-path="url(#f_jo)"><rect width="32" height="10.7" fill="#000000"/><rect y="10.7" width="32" height="10.6" fill="#ffffff"/><rect y="21.3" width="32" height="10.7" fill="#007a3d"/><polygon points="0,0 13,16 0,32" fill="#ce1126"/><circle cx="5.5" cy="16" r="1.8" fill="#ffffff"/></g></svg>',
       color: '#c026d3',
       textColor: '#ffffff',
       count: 3
@@ -85,7 +82,6 @@
       name: 'دولة الكويت',
       country: 'الكويت',
       flag: '🇰🇼',
-      flagSvg: '<svg viewBox="0 0 32 32" class="flag-svg" aria-label="الكويت"><clipPath id="f_kw"><circle cx="16" cy="16" r="16"/></clipPath><g clip-path="url(#f_kw)"><rect width="32" height="10.7" fill="#007a3d"/><rect y="10.7" width="32" height="10.6" fill="#ffffff"/><rect y="21.3" width="32" height="10.7" fill="#ce1126"/><polygon points="0,0 11,9.5 11,22.5 0,32" fill="#000000"/></g></svg>',
       color: '#ea580c',
       textColor: '#ffffff',
       count: 3
@@ -95,7 +91,6 @@
       name: 'دولة قطر',
       country: 'قطر',
       flag: '🇶🇦',
-      flagSvg: '<svg viewBox="0 0 32 32" class="flag-svg" aria-label="قطر"><clipPath id="f_qa"><circle cx="16" cy="16" r="16"/></clipPath><g clip-path="url(#f_qa)"><rect width="32" height="32" fill="#8d1b3d"/><polygon points="0,0 10,0 12,3.5 10,7 12,10.5 10,14 12,17.5 10,21 12,24.5 10,28 12,32 0,32" fill="#ffffff"/></g></svg>',
       color: '#dc2626',
       textColor: '#ffffff',
       count: 3
@@ -105,7 +100,6 @@
       name: 'دولة الإمارات',
       country: 'الإمارات',
       flag: '🇦🇪',
-      flagSvg: '<svg viewBox="0 0 32 32" class="flag-svg" aria-label="الإمارات"><clipPath id="f_ae"><circle cx="16" cy="16" r="16"/></clipPath><g clip-path="url(#f_ae)"><rect width="32" height="10.7" fill="#00732f"/><rect y="10.7" width="32" height="10.6" fill="#ffffff"/><rect y="21.3" width="32" height="10.7" fill="#000000"/><rect width="10" height="32" fill="#ff0000"/></g></svg>',
       color: '#eab308',
       textColor: '#1e293b',
       count: 3
@@ -115,7 +109,6 @@
       name: 'المملكة العربية السعودية',
       country: 'السعودية',
       flag: '🇸🇦',
-      flagSvg: '<svg viewBox="0 0 32 32" class="flag-svg" aria-label="السعودية"><circle cx="16" cy="16" r="16" fill="#006c35"/><rect x="8" y="14" width="16" height="2" fill="#ffffff" rx="1"/><rect x="9" y="18" width="14" height="1.6" fill="#ffffff" rx="0.8"/></svg>',
       color: '#16a34a',
       textColor: '#ffffff',
       count: 3
@@ -125,7 +118,6 @@
       name: 'جمهورية مصر العربية',
       country: 'مصر',
       flag: '🇪🇬',
-      flagSvg: '<svg viewBox="0 0 32 32" class="flag-svg" aria-label="مصر"><clipPath id="f_eg"><circle cx="16" cy="16" r="16"/></clipPath><g clip-path="url(#f_eg)"><rect width="32" height="10.7" fill="#c8102e"/><rect y="10.7" width="32" height="10.6" fill="#ffffff"/><rect y="21.3" width="32" height="10.7" fill="#000000"/><circle cx="16" cy="16" r="3.2" fill="#c09300"/></g></svg>',
       color: '#2563eb',
       textColor: '#ffffff',
       count: 2
@@ -141,7 +133,7 @@
       id: 0,
       type: 'go',
       name: 'البداية',
-      shortName: 'البداية',
+      shortName: 'START',
       subtitle: 'استلم 200$',
       icon: '⏩',
       description: 'نقطة الانطلاق! في كل مرة تمر بها أو تقف عليها تتقاضى راتب 200$ من البنك.'
@@ -568,20 +560,20 @@
       description: 'توجّه مباشرة إلى زنزانة السجن! لا تمر بخانة البداية ولا تتقاضَ أي راتب.'
     },
 
-    // 31: السعودية - مكة المكرمة
+    // 31: السعودية - الدمام
     {
       id: 31,
       type: 'property',
-      name: 'مكة المكرمة',
-      shortName: 'مكة المكرمة',
-      subtitle: 'قبلة المسلمين والمسجد الحرام',
+      name: 'الدمام',
+      shortName: 'الدمام',
+      subtitle: 'لؤلؤة المنطقة الشرقية والخليج العربي',
       country: 'السعودية',
       flag: '🇸🇦',
       group: 'green',
       price: 300,
       houseCost: 200,
       rent: [26, 130, 390, 900, 1100, 1275],
-      icon: '🕋'
+      icon: '🌊'
     },
 
     // 32: السعودية - جدة
@@ -650,20 +642,20 @@
       description: 'اسحب بطاقة مفاجأة واكتشف ما يخبئه لك الحظ!'
     },
 
-    // 37: مصر - قنا
+    // 37: مصر - الإسكندرية
     {
       id: 37,
       type: 'property',
-      name: 'قنا',
-      shortName: 'قنا',
-      subtitle: 'صعيد مصر العريق ومعبد دندرة',
+      name: 'الإسكندرية',
+      shortName: 'الإسكندرية',
+      subtitle: 'عروس البحر الأبيض وقلعة قايتباي',
       country: 'مصر',
       flag: '🇪🇬',
       group: 'royal',
       price: 350,
       houseCost: 200,
       rent: [35, 175, 500, 1100, 1300, 1500],
-      icon: '🏛️'
+      icon: '🏰'
     },
 
     // 38: ضريبة الرفاهية والكماليات
@@ -932,13 +924,6 @@
       amount: 50
     }
   ];
-
-  BOARD_TILES.forEach(function (tile) {
-    if (tile.group && COLOR_GROUPS[tile.group]) {
-      tile.flagSvg = COLOR_GROUPS[tile.group].flagSvg;
-      tile.flag = COLOR_GROUPS[tile.group].flag;
-    }
-  });
 
   /**
    * حساب إحداثيات الشبكة 11×11 تماماً كما في Richup.io:

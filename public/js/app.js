@@ -88,11 +88,10 @@
   // Utilities
   function escapeHtml(str) {
     return String(str || '')
-      .split('&').join('&amp;')
-      .split('<').join('&lt;')
-      .split('>').join('&gt;')
-      .split('"').join('&quot;')
-      .split("'").join('&#39;');
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   function hexToRgba(hex, alpha) {
@@ -249,39 +248,19 @@
 
   function saveSession(roomCode, playerId, sessionToken) {
     try {
-      const pName = (els.playerNameInput && els.playerNameInput.value.trim()) || localStorage.getItem('beh_last_name') || '';
-      if (pName) localStorage.setItem('beh_last_name', pName);
-      const sessionObj = {
-        roomCode: String(roomCode).toUpperCase().trim(),
+      localStorage.setItem('beh_last_name', els.playerNameInput.value.trim());
+      sessionStorage.setItem('beh_session_' + roomCode, JSON.stringify({
+        roomCode: roomCode,
         playerId: playerId,
-        sessionToken: sessionToken,
-        playerName: pName,
-        avatarId: ui.selectedAvatarId,
-        timestamp: Date.now()
-      };
-      const json = JSON.stringify(sessionObj);
-      localStorage.setItem('beh_active_session', json);
-      localStorage.setItem('beh_session_' + sessionObj.roomCode, json);
-      sessionStorage.setItem('beh_session_' + sessionObj.roomCode, json);
+        sessionToken: sessionToken
+      }));
     } catch (_e) { }
   }
 
   function loadSession(roomCode) {
     try {
-      const code = roomCode ? String(roomCode).toUpperCase().trim() : null;
-      let raw = null;
-      if (code) {
-        raw = sessionStorage.getItem('beh_session_' + code) || localStorage.getItem('beh_session_' + code);
-      }
-      if (!raw) {
-        raw = localStorage.getItem('beh_active_session');
-      }
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (code && parsed.roomCode && parsed.roomCode !== code) {
-        return null;
-      }
-      return parsed;
+      const raw = sessionStorage.getItem('beh_session_' + roomCode);
+      return raw ? JSON.parse(raw) : null;
     } catch (_e) {
       return null;
     }
@@ -289,12 +268,7 @@
 
   function clearSession(roomCode) {
     try {
-      if (roomCode) {
-        const code = String(roomCode).toUpperCase().trim();
-        sessionStorage.removeItem('beh_session_' + code);
-        localStorage.removeItem('beh_session_' + code);
-      }
-      localStorage.removeItem('beh_active_session');
+      if (roomCode) sessionStorage.removeItem('beh_session_' + roomCode);
     } catch (_e) { }
   }
 
@@ -351,95 +325,70 @@
             '<div class="corner-inner corner-start">' +
             '<div class="corner-badge-top">استلم 200$</div>' +
             '<div class="corner-symbol green-arrows">⏩</div>' +
-            '<div class="corner-main-title">البداية</div>' +
+            '<div class="corner-main-title">START</div>' +
             '</div>';
         } else if (tile.id === 10) {
           innerHtml =
             '<div class="corner-inner corner-prison">' +
             '<div class="corner-symbol">⛓️</div>' +
-            '<div class="corner-main-title">السجن</div>' +
-            '<div class="corner-sub-text">زيارة / حجز</div>' +
+            '<div class="corner-main-title">In Prison</div>' +
+            '<div class="corner-sub-text">في السجن / زيارة</div>' +
             '</div>';
         } else if (tile.id === 20) {
           innerHtml =
             '<div class="corner-inner corner-vacation">' +
             '<div class="corner-symbol">🌴</div>' +
-            '<div class="corner-main-title">الاستراحة</div>' +
-            '<div class="corner-sub-text">عطلة مجانية</div>' +
+            '<div class="corner-main-title">Vacation</div>' +
+            '<div class="corner-sub-text">عطلة واستراحة</div>' +
             '</div>';
         } else {
           innerHtml =
             '<div class="corner-inner corner-go-jail">' +
             '<div class="corner-symbol">☠️</div>' +
-            '<div class="corner-main-title">إلى السجن</div>' +
-            '<div class="corner-sub-text">ادخل السجن!</div>' +
+            '<div class="corner-main-title">Go to prison</div>' +
+            '<div class="corner-sub-text">إلى السجن!</div>' +
             '</div>';
         }
       } else {
-        // تم وضع علم الدولة الأنيق في الحافة الداخلية المواجهة لمركز النرد (مكان العلامات الحمراء كما في Richup)
-        // ووضع السعر والمنازل في الحافة الخارجية
-        const flagSvgContent = tile.flagSvg || (tile.flag ? ('<span class="flag-emoji-fallback">' + tile.flag + '</span>') : '');
-        let innerEdgeHtml = '';
-        if (flagSvgContent) {
-          innerEdgeHtml =
-            '<div class="tile-inner-edge">' +
-              '<div class="tile-flag-circle" title="' + escapeHtml(tile.country || '') + '">' + flagSvgContent + '</div>' +
-            '</div>';
-        } else if (tile.type === 'station') {
-          innerEdgeHtml =
-            '<div class="tile-inner-edge">' +
-              '<div class="tile-special-icon airport-icon">✈️</div>' +
-            '</div>';
-        } else if (tile.type === 'utility') {
-          innerEdgeHtml =
-            '<div class="tile-inner-edge">' +
-              '<div class="tile-special-icon utility-icon">' + tile.icon + '</div>' +
-            '</div>';
-        } else if (tile.type === 'chance') {
-          innerEdgeHtml =
-            '<div class="tile-inner-edge">' +
-              '<div class="tile-special-icon surprise-icon">❓</div>' +
-            '</div>';
-        } else if (tile.type === 'community') {
-          innerEdgeHtml =
-            '<div class="tile-inner-edge">' +
-              '<div class="tile-special-icon treasure-icon">📦</div>' +
-            '</div>';
-        } else if (tile.type === 'tax') {
-          innerEdgeHtml =
-            '<div class="tile-inner-edge">' +
-              '<div class="tile-special-icon tax-icon">' + tile.icon + '</div>' +
-            '</div>';
-        } else {
-          innerEdgeHtml =
-            '<div class="tile-inner-edge">' +
-              '<div class="tile-special-icon">' + tile.icon + '</div>' +
-            '</div>';
-        }
-
-        let priceText = '';
-        if (tile.price) {
-          priceText = '$' + tile.price;
-        } else if (tile.taxAmount) {
-          priceText = '-$' + tile.taxAmount;
-        }
-
-        const outerEdgeHtml =
-          '<div class="tile-outer-edge">' +
+        let colorHeaderHtml = '';
+        if (hasColorBar) {
+          const grp = COLOR_GROUPS[tile.group];
+          colorHeaderHtml =
+            '<div class="tile-color-bar" id="tileBar_' + tile.id + '" style="background:' + grp.color + ';">' +
             '<span class="tile-bar-houses" id="tileHouses_' + tile.id + '"></span>' +
-            (priceText ? ('<div class="tile-price">' + priceText + '</div>') : '') +
-          '</div>';
+            '</div>';
+        }
 
-        const centerNameHtml =
-          '<div class="tile-name">' +
-            '<span class="tile-main-city">' + escapeHtml(tile.shortName || tile.name) + '</span>' +
-          '</div>';
+        let emblemHtml = '';
+        if (tile.flag) {
+          emblemHtml = '<div class="tile-flag-circle" title="' + escapeHtml(tile.country || '') + '">' + tile.flag + '</div>';
+        } else if (tile.type === 'station') {
+          emblemHtml = '<div class="tile-special-icon airport-icon">✈️</div>';
+        } else if (tile.type === 'utility') {
+          emblemHtml = '<div class="tile-special-icon utility-icon">' + tile.icon + '</div>';
+        } else if (tile.type === 'chance') {
+          emblemHtml = '<div class="tile-special-icon surprise-icon">❓</div>';
+        } else if (tile.type === 'community') {
+          emblemHtml = '<div class="tile-special-icon treasure-icon">📦</div>';
+        } else if (tile.type === 'tax') {
+          emblemHtml = '<div class="tile-special-icon tax-icon">' + tile.icon + '</div>';
+        } else {
+          emblemHtml = '<div class="tile-special-icon">' + tile.icon + '</div>';
+        }
+
+        let bottomPriceHtml = '';
+        if (tile.price) {
+          bottomPriceHtml = '<div class="tile-price">$' + tile.price + '</div>';
+        } else if (tile.taxAmount) {
+          bottomPriceHtml = '<div class="tile-price">-$' + tile.taxAmount + '</div>';
+        }
 
         innerHtml =
+          colorHeaderHtml +
           '<div class="tile-owner-stamp hidden" id="tileStamp_' + tile.id + '"></div>' +
-          outerEdgeHtml +
-          centerNameHtml +
-          innerEdgeHtml;
+          emblemHtml +
+          '<div class="tile-name">' + escapeHtml(tile.shortName || tile.name) + '</div>' +
+          bottomPriceHtml;
       }
 
       div.innerHTML = innerHtml;
@@ -1141,7 +1090,7 @@
             '<div class="under-prop-row" data-tile-jump="' + tid + '" style="--prop-bar-color:' + barColor + '">' +
             '<div class="under-prop-ident">' +
             '<span class="under-prop-flag">' + (tile.flag || tile.icon || '📍') + '</span>' +
-            '<span>' + escapeHtml(tile.name) + (tile.country ? (' <small style="color:#94a3b8;font-size:0.75rem">(' + escapeHtml(tile.country) + ')</small>') : '') + '</span>' +
+            '<span>' + escapeHtml(tile.name) + '</span>' +
             '</div>' +
             '<div class="under-prop-status">' + houseBadge + '</div>' +
             '</div>'
@@ -1264,25 +1213,10 @@
     }).join('');
 
     if (els.centerLiveFeed) {
-      const recent = (state.logs || []).slice(0, 5).reverse();
+      const recent = (state.logs || []).slice(0, 6);
       els.centerLiveFeed.innerHTML = recent.map(function (lg) {
-        let pColor = '#38bdf8';
-        if (state.players) {
-          for (let i = 0; i < state.players.length; i++) {
-            if (lg.text.indexOf(state.players[i].name) !== -1) {
-              pColor = state.players[i].color;
-              break;
-            }
-          }
-        }
-        return (
-          '<div class="feed-entry">' +
-          '<span class="feed-dot" style="background:' + pColor + '; box-shadow: 0 0 6px ' + pColor + ';"></span>' +
-          '<span class="feed-text">' + escapeHtml(lg.text) + '</span>' +
-          '</div>'
-        );
+        return '<div class="feed-entry">' + escapeHtml(lg.text) + '</div>';
       }).join('');
-      els.centerLiveFeed.scrollTop = els.centerLiveFeed.scrollHeight;
     }
 
     const chatArr = state.chat || [];
@@ -1351,14 +1285,14 @@
       groupLabel = 'مرفق خدمات عامة';
     }
 
-    let emblemHtml = tile.flagSvg || ('<span class="deed-emblem">' + (tile.flag || tile.icon) + '</span>');
-    let bodyHtml =
-      '<div class="deed-header" style="background:' + headerBg + ';color:' + headerColor + '">' +
-      '<div class="deed-emblem-wrap">' + emblemHtml + '</div>' +
-      '<div style="font-size:0.8rem;font-weight:800;opacity:0.92">' + escapeHtml(groupLabel) + '</div>' +
-      '<h3>' + escapeHtml(tile.name) + '</h3>' +
-      (tile.subtitle ? '<div style="font-size:0.86rem;opacity:0.95;margin-top:2px">' + escapeHtml(tile.subtitle) + '</div>' : '') +
-      '</div>';
+      let emblemChar = tile.flag || tile.icon;
+      bodyHtml =
+        '<div class="deed-header" style="background:' + headerBg + ';color:' + headerColor + '">' +
+        '<span class="deed-emblem">' + emblemChar + '</span>' +
+        '<div style="font-size:0.8rem;font-weight:800;opacity:0.92">' + escapeHtml(groupLabel) + '</div>' +
+        '<h3>' + escapeHtml(tile.name) + '</h3>' +
+        (tile.subtitle ? '<div style="font-size:0.86rem;opacity:0.95;margin-top:2px">' + escapeHtml(tile.subtitle) + '</div>' : '') +
+        '</div>';
 
     if (isPurchasable(tile)) {
       bodyHtml +=
@@ -1399,45 +1333,31 @@
       }
 
       if (state && prop && prop.ownerId === ui.myPlayerId) {
+        const isMyTurn = state.players[state.currentTurnIndex] && state.players[state.currentTurnIndex].id === ui.myPlayerId;
         bodyHtml += '<div class="deed-controls">';
-        if (tile.type === 'property') {
-          const groupTiles = BOARD_TILES.filter(function (t) { return t.group === tile.group; });
-          const ownedCount = groupTiles.filter(function (t) {
-            return state.properties[t.id] && state.properties[t.id].ownerId === ui.myPlayerId;
-          }).length;
-          const isMonopoly = (ownedCount === groupTiles.length);
-          const myPlayer = state.players.find(function (p) { return p.id === ui.myPlayerId; });
-          const canAfford = myPlayer && myPlayer.cash >= tile.houseCost;
-
-          if (isMonopoly && !prop.mortgaged && prop.houses < 5) {
-            bodyHtml +=
-              '<button class="btn btn-emerald full-width btn-lg" data-build-tile="' + tile.id + '" type="button" ' + (canAfford ? '' : 'disabled') + '>' +
-              (prop.houses === 4 ? '🏨 تشييد فندق سياحي' : '🏠 بناء وتطوير منزل جديد') + ' (' + formatMoney(tile.houseCost) + ')' +
-              '</button>';
-          } else if (!isMonopoly && prop.houses < 5) {
-            bodyHtml +=
-              '<div class="deed-monopoly-notice">' +
-              '🔒 لتطوير وبناء منازل في هذه المحافظة، يجب امتلاك جميع محافظات ' + escapeHtml(groupLabel) + ' كاملة (' + ownedCount + '/' + groupTiles.length + ')!' +
-              '</div>';
-          }
-          if (prop.houses > 0) {
-            bodyHtml +=
-              '<button class="btn btn-danger-outline full-width" data-sell-tile="' + tile.id + '" type="button" style="margin-top:6px;">' +
-              'بيع مبنى واسترداد ' + formatMoney(Math.floor(tile.houseCost / 2)) +
-              '</button>';
-          }
-          if (!prop.mortgaged && prop.houses === 0) {
-            bodyHtml +=
-              '<button class="btn btn-outline full-width" data-mort-tile="' + tile.id + '" type="button" style="margin-top:6px;">' +
-              'رهن العقار للبنك (+' + formatMoney(Math.floor(tile.price / 2)) + ')' +
-              '</button>';
-          } else if (prop.mortgaged) {
-            const unmortCost = Math.ceil((tile.price / 2) * 1.1);
-            bodyHtml +=
-              '<button class="btn btn-gold full-width" data-unmort-tile="' + tile.id + '" type="button" style="margin-top:6px;">' +
-              'فك الرهن العقاري (-' + formatMoney(unmortCost) + ')' +
-              '</button>';
-          }
+        if (tile.type === 'property' && !prop.mortgaged && prop.houses < 5) {
+          bodyHtml +=
+            '<button class="btn btn-emerald full-width" data-build-tile="' + tile.id + '" type="button" ' + (!isMyTurn ? 'disabled' : '') + '>' +
+            (prop.houses === 4 ? '🏨 تشييد فندق سياحي' : '🏠 بناء منزل جديد') + ' (' + formatMoney(tile.houseCost) + ')' +
+            '</button>';
+        }
+        if (tile.type === 'property' && prop.houses > 0) {
+          bodyHtml +=
+            '<button class="btn btn-danger-outline full-width" data-sell-tile="' + tile.id + '" type="button">' +
+            'بيع مبنى واسترداد ' + formatMoney(Math.floor(tile.houseCost / 2)) +
+            '</button>';
+        }
+        if (!prop.mortgaged && prop.houses === 0) {
+          bodyHtml +=
+            '<button class="btn btn-outline full-width" data-mort-tile="' + tile.id + '" type="button">' +
+            'رهن العقار للبنك (+' + formatMoney(Math.floor(tile.price / 2)) + ')' +
+            '</button>';
+        } else if (prop.mortgaged) {
+          const unmortCost = Math.ceil((tile.price / 2) * 1.1);
+          bodyHtml +=
+            '<button class="btn btn-gold full-width" data-unmort-tile="' + tile.id + '" type="button">' +
+            'فك الرهن العقاري (-' + formatMoney(unmortCost) + ')' +
+            '</button>';
         }
         bodyHtml += '</div>';
       } else if (state && owner && owner.id !== ui.myPlayerId && !owner.bankrupt) {
@@ -1447,19 +1367,6 @@
           '🤝 اطلب شراء "' + escapeHtml(tile.name) + '" في صفقة مع ' + escapeHtml(owner.name) +
           '</button>' +
           '</div>';
-      } else if (state && !owner && isPurchasable(tile)) {
-        const curPlayer = state.players[state.currentTurnIndex];
-        const isMyTurn = curPlayer && curPlayer.id === ui.myPlayerId;
-        const isLandedHere = isMyTurn && curPlayer.position === tile.id && state.turnPhase === 'BUY_DECISION';
-        if (isLandedHere) {
-          const canAfford = curPlayer.cash >= tile.price;
-          bodyHtml +=
-            '<div class="deed-controls">' +
-            '<button class="btn btn-emerald full-width btn-lg" id="deedBuyNowBtn" type="button" ' + (canAfford ? '' : 'disabled') + '>' +
-            '🛒 شراء هذه المحافظة الآن (' + formatMoney(tile.price) + ')' +
-            '</button>' +
-            '</div>';
-        }
       }
     } else {
       bodyHtml +=
@@ -1908,33 +1815,9 @@
     }
 
     els.leaveRoomBtn.addEventListener('click', function () {
-      // إذا كانت أي قائمة جانبية أو نافذة مفتوحة على الهاتف، الخروج يرجعك لساحة اللعب مباشرة ولا يخرجك للرئيسية
-      if (els.drawerPlayers && els.drawerPlayers.classList.contains('mobile-open')) {
-        setMobileView('board');
-        return;
+      if (window.confirm('هل تريد مغادرة الغرفة الحالية؟')) {
+        exitToHome();
       }
-      if (els.drawerSocial && els.drawerSocial.classList.contains('mobile-open')) {
-        setMobileView('board');
-        return;
-      }
-      if (els.tileModal && !els.tileModal.classList.contains('hidden')) {
-        els.tileModal.classList.add('hidden');
-        return;
-      }
-      if (els.tradeModal && !els.tradeModal.classList.contains('hidden')) {
-        els.tradeModal.classList.add('hidden');
-        return;
-      }
-
-      if (ui.state && ui.state.status === 'PLAYING') {
-        const ok = window.confirm(
-          'أنت الآن في منتصف مباراة بنك الحظ!\n\nهل تريد الخروج مؤقتاً إلى القائمة الرئيسية؟ (ستظل محتفظاً بمكانك وأموالك وعقاراتك، ويمكنك العودة للمباراة فوراً بمجرد فتح اللعبة).'
-        );
-        if (!ok) return;
-      } else {
-        if (!window.confirm('هل تريد مغادرة الغرفة والعودة للقائمة الرئيسية؟')) return;
-      }
-      exitToHome();
     });
     els.winnerExitBtn.addEventListener('click', exitToHome);
 
@@ -1998,16 +1881,10 @@
     if (els.floatingChatBtn) {
       els.floatingChatBtn.addEventListener('click', function () {
         AudioFX.click();
-        if (els.drawerSocial) {
-          const isOpen = els.drawerSocial.classList.contains('chat-open');
-          if (isOpen) {
-            els.drawerSocial.classList.remove('chat-open');
-          } else {
-            els.drawerSocial.classList.add('chat-open');
-            activateLeftSubtab('chat');
-            const chatIn = document.getElementById('chatInput');
-            if (chatIn) chatIn.focus();
-          }
+        if (els.drawerSocial && els.drawerSocial.classList.contains('mobile-open')) {
+          setMobileView('board');
+        } else {
+          setMobileView('social');
         }
       });
     }
@@ -2068,7 +1945,6 @@
 
       const closeDrawer = ev.target.closest('[data-close-drawer]');
       if (closeDrawer) {
-        if (els.drawerSocial) els.drawerSocial.classList.remove('chat-open');
         setMobileView('board');
         return;
       }
@@ -2091,38 +1967,15 @@
 
       const buildBtn = ev.target.closest('[data-build-tile]');
       if (buildBtn) {
-        const tid = Number(buildBtn.dataset.buildTile);
-        dispatchGameAction({ type: 'BUILD_HOUSE', tileId: tid }).then(function (r) {
-          if (r && r.ok) {
-            AudioFX.buy();
-            if (ui.openTileModalId !== null && els.tileModal && !els.tileModal.classList.contains('hidden')) {
-              openTileModal(ui.openTileModalId);
-            }
-          }
+        dispatchGameAction({ type: 'BUILD_HOUSE', tileId: Number(buildBtn.dataset.buildTile) }).then(function (r) {
+          if (r && r.ok) AudioFX.buy();
         });
         return;
       }
 
       const sellBtn = ev.target.closest('[data-sell-tile]');
       if (sellBtn) {
-        const tid = Number(sellBtn.dataset.sellTile);
-        dispatchGameAction({ type: 'SELL_HOUSE', tileId: tid }).then(function (r) {
-          if (r && r.ok) {
-            AudioFX.click();
-            if (ui.openTileModalId !== null && els.tileModal && !els.tileModal.classList.contains('hidden')) {
-              openTileModal(ui.openTileModalId);
-            }
-          }
-        });
-        return;
-      }
-
-      const buyFromDeed = ev.target.closest('#deedBuyNowBtn');
-      if (buyFromDeed) {
-        els.tileModal.classList.add('hidden');
-        dispatchGameAction({ type: 'BUY_PROPERTY' }).then(function (r) {
-          if (r && r.ok) AudioFX.buy();
-        });
+        dispatchGameAction({ type: 'SELL_HOUSE', tileId: Number(sellBtn.dataset.sellTile) });
         return;
       }
 
@@ -2254,137 +2107,50 @@
       layoutAllTokensStatic(ui.state);
       if (Ads) Ads.refresh();
     });
-
-    // حماية زر الرجوع وسحب الشاشة على الهاتف لكي يرجع اللاعب لساحة اللعب ولا يخرجه من الجيم
-    try {
-      window.history.pushState({ inGame: true }, '');
-    } catch (_e) { }
-
-    window.addEventListener('popstate', function () {
-      if (els.tileModal && !els.tileModal.classList.contains('hidden')) {
-        els.tileModal.classList.add('hidden');
-        window.history.pushState({ inGame: true }, '');
-        return;
-      }
-      if (els.tradeModal && !els.tradeModal.classList.contains('hidden')) {
-        els.tradeModal.classList.add('hidden');
-        window.history.pushState({ inGame: true }, '');
-        return;
-      }
-      if (ui.activeMobileView !== 'board') {
-        setMobileView('board');
-        window.history.pushState({ inGame: true }, '');
-        return;
-      }
-      if (ui.state && (ui.state.status === 'PLAYING' || ui.state.status === 'LOBBY')) {
-        window.history.pushState({ inGame: true }, '');
-      }
-    });
-
-    // استعادة ومزامنة اللعبة فوراً عند العودة إلى المتصفح أو فتح قفل شاشة الهاتف
-    document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible' && ui.roomCode && ui.myPlayerId) {
-        Network.sendAction({ type: 'PING' }).catch(function () {});
-      }
-    });
-
-    window.addEventListener('focus', function () {
-      if (ui.roomCode && ui.myPlayerId) {
-        Network.sendAction({ type: 'PING' }).catch(function () {});
-      }
-    });
-
-    window.addEventListener('online', function () {
-      if (ui.roomCode && ui.myPlayerId) {
-        showToast('🌐 عاد اتصال الإنترنت! جاري تحديث اللعبة...', 'info');
-        Network.sendAction({ type: 'PING' }).catch(function () {});
-      }
-    });
   }
 
-  // ==================== Startup & Automatic Game Session Reconnection ====================
-  function checkInviteOrRestoreActiveSession() {
+  // ==================== Startup & URL Invite Handling ====================
+  function checkInviteUrlOnLoad() {
     try {
       const savedName = localStorage.getItem('beh_last_name');
-      if (savedName && els.playerNameInput) els.playerNameInput.value = savedName;
+      if (savedName) els.playerNameInput.value = savedName;
     } catch (_e) { }
 
     const params = new URLSearchParams(window.location.search);
-    let targetCode = (params.get('room') || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    let session = null;
+    const roomParam = (params.get('room') || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    if (!roomParam) return;
 
-    if (targetCode) {
-      session = loadSession(targetCode);
-    } else {
-      // إذا فتح المتصفح بدون كود غرفة، يتم فحص الجلسة النشطة بالمتصفح لإعادة اللاعب مباشرة
-      const activeRaw = localStorage.getItem('beh_active_session');
-      if (activeRaw) {
-        try {
-          const act = JSON.parse(activeRaw);
-          if (act && act.roomCode && (!act.timestamp || Date.now() - act.timestamp < 12 * 3600 * 1000)) {
-            targetCode = act.roomCode;
-            session = act;
-            window.history.replaceState({}, '', '?room=' + encodeURIComponent(targetCode));
-          }
-        } catch (_e) { }
-      }
-    }
-
-    if (!targetCode) {
-      setScreen('landing');
-      return;
-    }
-
-    els.joinRoomCodeInput.value = targetCode;
-
-    // استعادة اللاعب النشط مباشرة داخل اللعبة بدون إرجاعه لشاشة البداية
-    if (session && (session.sessionToken || session.playerId)) {
-      showToast('🔄 جاري استعادة مكانك في اللعبة مباشرة...', 'info');
-      const pName = (session.playerName || (els.playerNameInput && els.playerNameInput.value.trim()) || 'لاعب').trim();
-      const pAvatar = session.avatarId || ui.selectedAvatarId;
-
-      setTimeout(function () {
-        Network.joinRoom({
-          roomCode: targetCode,
-          playerId: session.playerId,
-          sessionToken: session.sessionToken,
-          playerName: pName,
-          avatarId: pAvatar
-        }).then(function (res) {
-          if (res && res.ok) {
-            ui.myPlayerId = res.playerId;
-            ui.roomCode = res.roomCode;
-            ui.cashInitialized = false;
-            saveSession(res.roomCode, res.playerId, res.sessionToken);
-            handleRoomState(res.state);
-            showToast('🎮 مرحباً بعودتك! تمت إعادتك للمباراة مباشرة.', 'success');
-          } else {
-            clearSession(targetCode);
-            setScreen('landing');
-            if (els.inviteBanner) {
-              els.inviteBanner.classList.remove('hidden');
-              els.inviteBannerTitle.textContent = 'الغرفة #' + targetCode;
-              els.inviteBannerSub.textContent = (res && res.error) || 'انتهت هذه المباراة أو لم تعد متاحة.';
-            }
-          }
-        }).catch(function () {
-          setScreen('landing');
-        });
-      }, 120);
-      return;
-    }
-
-    // زائر جديد عبر رابط دعوة
-    setScreen('landing');
+    els.joinRoomCodeInput.value = roomParam;
     els.inviteBanner.classList.remove('hidden');
-    els.inviteBannerTitle.textContent = '🎉 أنت مدعو للانضمام إلى الغرفة #' + targetCode;
+    els.inviteBannerTitle.textContent = '🎉 أنت مدعو للانضمام إلى الغرفة #' + roomParam;
 
-    Network.fetchRoomPreview(targetCode).then(function (preview) {
+    Network.fetchRoomPreview(roomParam).then(function (preview) {
       if (preview) {
         els.inviteBannerSub.textContent =
           'مضيف الغرفة: ' + preview.hostName + ' • اللاعبون الحاليون: ' + preview.playerCount + '/' + preview.maxPlayers + ' — اكتب اسمك واضغط انضمام!';
       }
     });
+
+    const existingSession = loadSession(roomParam);
+    if (existingSession && existingSession.sessionToken) {
+      setTimeout(function () {
+        Network.joinRoom({
+          roomCode: roomParam,
+          playerName: els.playerNameInput.value.trim() || 'لاعب',
+          avatarId: ui.selectedAvatarId,
+          sessionToken: existingSession.sessionToken
+        }).then(function (res) {
+          if (res && res.ok) {
+            ui.myPlayerId = res.playerId;
+            ui.roomCode = res.roomCode;
+            handleRoomState(res.state);
+            if (res.reconnected) {
+              showToast('🔄 تمت إعادة اتصالك بالغرفة تلقائياً!', 'success');
+            }
+          }
+        });
+      }, 350);
+    }
   }
 
   function initApp() {
@@ -2431,7 +2197,7 @@
 
     Network.onState(handleRoomState);
     Network.init();
-    checkInviteOrRestoreActiveSession();
+    checkInviteUrlOnLoad();
   }
 
   if (document.readyState === 'loading') {
