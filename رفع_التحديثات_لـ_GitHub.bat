@@ -6,8 +6,8 @@ echo ========================================================
 echo.
 
 git remote set-url origin https://github.com/ahmedmamdo0089-rgb/-bank-elhz.git
-git add .
-git commit -m "Fix Vercel build & Richup mobile layout" 2>nul
+git add -A
+git commit -m "Transform identity to Arabian Heritage Theme: New 3D logo, Arabian tokens, Arabesque styling, Richup mobile layout, and SEO boost" 2>nul
 echo.
 echo جاري الدفع إلى GitHub (main)...
 git push -u origin main --force

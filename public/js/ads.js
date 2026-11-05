@@ -3,7 +3,7 @@
 
   /**
    * ============================================================================
-   * 💰 نظام إدارة الإعلانات والأرباح المفعّل — بنك الحظ المصري (Ads Manager v4.1)
+   * 💰 نظام إدارة الإعلانات والأرباح المفعّل — بنك الحظ العربي (Ads Manager v5.5)
    * ============================================================================
    * تم ربط وتفعيل الوحدات الإعلانية الخاصة بك بنجاح:
    *  1) بانر عريض للكمبيوتر والتابلت (728×90): 71b51a1973d418aab7666f5c38587bc9
@@ -196,9 +196,6 @@
       if (typeof window !== 'undefined') {
         const s = window.sessionStorage && window.sessionStorage.getItem('beh_smartlink_unlocked');
         if (s === '1' || s === 'true') return true;
-        const l = window.localStorage && window.localStorage.getItem('beh_smartlink_unlocked_time');
-        // إذا كان تم التفعيل خلال آخر ساعتين يعتبر مفعلاً
-        if (l && (Date.now() - Number(l) < 2 * 60 * 60 * 1000)) return true;
       }
     } catch (_e) { }
     return false;
@@ -208,7 +205,15 @@
     try {
       if (typeof window !== 'undefined') {
         if (window.sessionStorage) window.sessionStorage.setItem('beh_smartlink_unlocked', '1');
-        if (window.localStorage) window.localStorage.setItem('beh_smartlink_unlocked_time', String(Date.now()));
+      }
+    } catch (_e) { }
+  }
+
+  function lockSmartlink() {
+    try {
+      if (typeof window !== 'undefined') {
+        if (window.sessionStorage) window.sessionStorage.removeItem('beh_smartlink_unlocked');
+        if (window.localStorage) window.localStorage.removeItem('beh_smartlink_unlocked_time');
       }
     } catch (_e) { }
   }
@@ -218,6 +223,7 @@
     refresh: refreshAllAds,
     isSmartlinkUnlocked: isSmartlinkUnlocked,
     unlockSmartlink: unlockSmartlink,
+    lockSmartlink: lockSmartlink,
     getSmartLinkUrl: function () {
       return AD_CONFIG.directSmartLink;
     }

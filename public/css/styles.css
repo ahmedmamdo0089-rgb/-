@@ -1,23 +1,25 @@
 :root {
-  --bg-deep: #13111c;
-  --bg-panel: #1b162b;
-  --bg-panel-elevated: #231c38;
-  --bg-card: #1f1933;
-  --richup-purple: #7c3aed;
-  --richup-purple-bright: #8b5cf6;
+  --bg-deep: #060b1c;
+  --bg-panel: #0b1433;
+  --bg-panel-elevated: #111e48;
+  --bg-card: #0f1c42;
+  --royal-blue: #1e3a8a;
+  --royal-blue-glow: #2563eb;
+  --richup-purple: #8b5cf6;
+  --richup-purple-bright: #a78bfa;
   --richup-purple-dark: #6d28d9;
   --gold: #f59e0b;
   --gold-bright: #fbbf24;
   --gold-dark: #d97706;
   --emerald: #10b981;
   --emerald-dark: #059669;
-  --danger: #e05353;
+  --danger: #ef4444;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --border-subtle: #2d264a;
-  --board-ivory: #1f1934;
-  --board-tile-bg: #201a35;
-  --board-border: #2c2448;
+  --border-subtle: rgba(245, 158, 11, 0.22);
+  --board-ivory: #0d173b;
+  --board-tile-bg: #0f1a3f;
+  --board-border: #1e2952;
   --die-half: 25px;
   --topbar-h: 60px;
 }
@@ -32,7 +34,7 @@
 html, body {
   height: 100%;
   font-family: 'Cairo', 'Tajawal', sans-serif;
-  background: radial-gradient(ellipse at 50% 15%, #221a38 0%, #13111c 75%);
+  background: radial-gradient(ellipse at 50% 12%, #0e1b43 0%, #060b1c 82%);
   color: var(--text-main);
   overflow-x: hidden;
 }
@@ -335,6 +337,117 @@ button, input, select {
 .hero-header p {
   color: var(--text-muted);
   font-size: 0.96rem;
+}
+
+/* ==================== صندوق العودة السريعة للمباراة الجارية ==================== */
+.resume-game-box {
+  width: 100%;
+  max-width: 580px;
+  margin: 0 auto 16px auto;
+  background: linear-gradient(135deg, rgba(245, 185, 66, 0.16), rgba(124, 58, 237, 0.28));
+  border: 1.5px solid rgba(245, 185, 66, 0.65);
+  border-radius: 14px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(245, 185, 66, 0.2), 0 0 16px rgba(124, 58, 237, 0.25);
+  animation: resumeBoxGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes resumeBoxGlow {
+  0% { box-shadow: 0 8px 24px rgba(245, 185, 66, 0.2), 0 0 16px rgba(124, 58, 237, 0.2); }
+  100% { box-shadow: 0 10px 28px rgba(245, 185, 66, 0.35), 0 0 24px rgba(124, 58, 237, 0.4); }
+}
+
+.resume-game-box.hidden {
+  display: none !important;
+}
+
+.resume-box-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.resume-box-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+  animation: pulse 1.6s infinite;
+  flex-shrink: 0;
+}
+
+.resume-box-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  text-align: right;
+}
+
+.resume-box-title {
+  font-weight: 900;
+  font-size: 0.95rem;
+  color: #fde68a;
+  letter-spacing: -0.2px;
+}
+
+.resume-box-sub {
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resume-box-sub strong {
+  color: #ffffff;
+}
+
+.resume-box-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.resume-pulse-btn {
+  font-weight: 800;
+  padding: 8px 14px;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(245, 185, 66, 0.45);
+  white-space: nowrap;
+}
+
+.dismiss-resume-btn {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+.dismiss-resume-btn:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 600px) {
+  .resume-game-box {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    gap: 10px;
+  }
+  .resume-box-text {
+    text-align: center;
+  }
+  .resume-box-content {
+    justify-content: center;
+  }
+  .resume-box-actions {
+    justify-content: center;
+  }
 }
 
 .invite-alert {
@@ -1128,10 +1241,10 @@ button, input, select {
   aspect-ratio: 1 / 1;
   width: min(100%, calc(100dvh - var(--topbar-h) - 24px));
   max-width: 860px;
-  background: #171325;
-  border: 2.5px solid #2e264a;
+  background: #091026;
+  border: 2.5px solid rgba(245, 158, 11, 0.45);
   border-radius: 14px;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.75);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.85), 0 0 24px rgba(245, 158, 11, 0.15);
   display: grid;
   grid-template-columns: 1.2fr repeat(9, 1fr) 1.2fr;
   grid-template-rows: 1.2fr repeat(9, 1fr) 1.2fr;
@@ -1144,9 +1257,9 @@ button, input, select {
 
 .board-tile {
   direction: rtl;
-  background: var(--board-tile-bg, #201a35);
+  background: var(--board-tile-bg, #0d173b);
   color: #f8fafc;
-  border: 1px solid #2b2346;
+  border: 1px solid rgba(245, 158, 11, 0.18);
   border-radius: 4px;
   position: relative;
   display: flex;
@@ -1162,11 +1275,11 @@ button, input, select {
 
 .board-tile:hover {
   z-index: 6;
-  box-shadow: 0 0 0 2px var(--richup-purple-bright), 0 6px 14px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 2px var(--gold-bright), 0 6px 14px rgba(0, 0, 0, 0.6);
 }
 
 .board-tile.corner-tile {
-  background: #19142b;
+  background: #070d22;
   justify-content: center;
   gap: 1px;
   padding: 2px;
@@ -1380,107 +1493,128 @@ button, input, select {
 
 .board-token {
   position: absolute;
-  width: clamp(22px, 3.2vw, 34px);
-  height: clamp(22px, 3.2vw, 34px);
+  width: clamp(26px, 3.8vw, 36px);
+  height: clamp(26px, 3.8vw, 36px);
   border-radius: 50%;
-  border: 2px solid #ffffff;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.65);
+  border: 2px solid #f59e0b;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.75), 0 0 8px rgba(245, 158, 11, 0.45);
   transform: translate(-50%, -50%);
-  transition: left 0.14s linear, top 0.14s linear, transform 0.14s ease;
+  transition: left 0.16s linear, top 0.16s linear, transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 22;
+  cursor: pointer;
 }
 
-.board-token .richup-token-eyes {
+.arabian-token-content {
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.board-token .richup-eye {
+.token-arabian-icon {
+  font-size: clamp(0.85rem, 1.9vw, 1.15rem);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.75));
+  line-height: 1;
+}
+
+.token-gold-border {
   position: absolute;
-  top: 26%;
-  width: 32%;
-  height: 32%;
-  background: #ffffff;
+  inset: 1px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.board-token .richup-eye.left {
-  left: 18%;
-}
-.board-token .richup-eye.right {
-  right: 18%;
-}
-.board-token .richup-pupil {
-  width: 44%;
-  height: 44%;
-  background: #0f172a;
-  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, 0.55);
+  pointer-events: none;
 }
 
 .board-token.hopping {
-  transform: translate(-50%, -68%) scale(1.18);
+  transform: translate(-50%, -75%) scale(1.22);
 }
 
 .board-token.active-player-token {
-  box-shadow: 0 0 0 3px var(--gold-bright), 0 4px 14px rgba(0, 0, 0, 0.7);
-  z-index: 25;
+  box-shadow: 0 0 0 3px #fbbf24, 0 0 16px rgba(245, 158, 11, 0.8), 0 6px 16px rgba(0, 0, 0, 0.8);
+  border-color: #fff;
+  z-index: 28;
+  animation: tokenActivePulse 1.8s infinite ease-in-out;
 }
 
-/* شخصية Richup.io الدائرية العامة */
-.richup-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--blob-color, #38bdf8);
+@keyframes tokenActivePulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+}
+
+/* الأيقونات والميداليات الملكية العربية الفاخرة للقطع والشخصيات */
+.arabian-avatar {
   position: relative;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
-  flex-shrink: 0;
-  display: inline-block;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
-}
-.richup-avatar.sm {
-  width: 34px;
-  height: 34px;
-}
-.richup-avatar.xs {
-  width: 22px;
-  height: 22px;
-}
-.richup-avatar.lg {
-  width: 52px;
-  height: 52px;
-}
-.richup-avatar .richup-eye {
-  position: absolute;
-  top: 26%;
-  width: 32%;
-  height: 32%;
-  background: #ffffff;
-  border-radius: 50%;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-.richup-avatar .richup-eye.left {
-  left: 18%;
-}
-.richup-avatar .richup-eye.right {
-  right: 18%;
-}
-.richup-avatar .richup-pupil {
-  width: 44%;
-  height: 44%;
-  background: #0f172a;
   border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.25);
+  border: 1.5px solid rgba(245, 158, 11, 0.65);
+  user-select: none;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+}
+
+.arabian-avatar.avatar-xs {
+  width: 24px;
+  height: 24px;
+  font-size: 0.72rem;
+  border-width: 1px;
+}
+
+.arabian-avatar.avatar-sm {
+  width: 36px;
+  height: 36px;
+  font-size: 1.05rem;
+}
+
+.arabian-avatar.avatar-md {
+  width: 44px;
+  height: 44px;
+  font-size: 1.25rem;
+}
+
+.arabian-avatar.avatar-lg {
+  width: 54px;
+  height: 54px;
+  font-size: 1.55rem;
+  border-width: 2px;
+}
+
+.avatar-arabian-icon {
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+  line-height: 1;
+}
+
+.avatar-gold-rim {
+  position: absolute;
+  inset: 1px;
+  border-radius: 50%;
+  border: 1px dashed rgba(251, 191, 36, 0.45);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* التوافقية السابقة */
+.richup-avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* ==================== مركز اللوحة والنرد ثلاثي الأبعاد ==================== */
@@ -1488,8 +1622,8 @@ button, input, select {
   direction: rtl;
   grid-row: 2 / 11;
   grid-column: 2 / 11;
-  background: radial-gradient(circle at center, #1e1933 0%, #130f22 100%);
-  border: 1.5px solid #2d264a;
+  background: radial-gradient(circle at center, #0e1b43 0%, #060c22 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.35);
   border-radius: 10px;
   padding: clamp(8px, 1.5vw, 18px);
   display: flex;
@@ -1548,8 +1682,8 @@ button, input, select {
 }
 
 .under-player-card {
-  background: #1e1933;
-  border: 1px solid #2d264a;
+  background: #0d173b;
+  border: 1px solid rgba(245, 158, 11, 0.22);
   border-radius: 12px;
   padding: 10px 14px;
   display: flex;
@@ -1558,8 +1692,9 @@ button, input, select {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .under-player-card.active-turn {
-  border-color: #8b5cf6;
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.35);
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+  background: linear-gradient(135deg, #101c44, #0d173b);
 }
 .under-player-card.is-bankrupt {
   opacity: 0.55;
@@ -1585,20 +1720,21 @@ button, input, select {
   gap: 6px;
 }
 .me-pill {
-  background: rgba(139, 92, 246, 0.25);
-  border: 1px solid #8b5cf6;
-  color: #c4b5fd;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid var(--gold);
+  color: #fde68a;
   border-radius: 999px;
   padding: 1px 7px;
   font-size: 0.68rem;
+  font-weight: 800;
 }
 .under-player-status {
   font-size: 0.74rem;
   color: #94a3b8;
 }
 .under-player-status.turn {
-  color: #4ade80;
-  font-weight: 700;
+  color: var(--gold-bright);
+  font-weight: 800;
 }
 .under-player-status.jail {
   color: #f87171;
@@ -1606,8 +1742,8 @@ button, input, select {
 
 .under-player-cash {
   font-size: 1.25rem;
-  font-weight: 800;
-  color: #ffffff;
+  font-weight: 900;
+  color: #4ade80;
   letter-spacing: 0.5px;
 }
 .under-player-cash.negative {
@@ -1622,19 +1758,19 @@ button, input, select {
 
 .btn-bankrupt {
   flex: 1;
-  background: #e05353;
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
   color: #ffffff;
-  border: none;
+  border: 1px solid rgba(254, 202, 202, 0.2);
   border-radius: 8px;
   padding: 11px 16px;
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  box-shadow: 0 4px 12px rgba(224, 83, 83, 0.3);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
   transition: opacity 0.15s, transform 0.15s;
 }
 .btn-bankrupt:hover {
@@ -1644,19 +1780,19 @@ button, input, select {
 
 .btn-richup-trades {
   flex: 1;
-  background: #7c3aed;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
   color: #ffffff;
-  border: none;
+  border: 1px solid rgba(245, 158, 11, 0.45);
   border-radius: 8px;
   padding: 11px 16px;
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
   transition: opacity 0.15s, transform 0.15s;
 }
 .btn-richup-trades:hover {
@@ -1664,7 +1800,9 @@ button, input, select {
   transform: translateY(-1px);
 }
 .trades-badge-pill {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(245, 158, 11, 0.3);
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  color: #fde68a;
   padding: 2px 7px;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -1672,8 +1810,8 @@ button, input, select {
 
 /* قائمة أملاكي التفاعلية */
 .under-board-properties {
-  background: #1b162c;
-  border: 1px solid #2d264a;
+  background: #0b1433;
+  border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: 12px;
   padding: 12px;
   display: flex;
@@ -1683,7 +1821,7 @@ button, input, select {
 .under-props-header h4 {
   font-size: 0.92rem;
   font-weight: 800;
-  color: #cbd5e1;
+  color: var(--gold-bright);
 }
 .under-props-list {
   display: flex;
@@ -1695,14 +1833,14 @@ button, input, select {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: #231c38;
+  background: #111e48;
   border-radius: 8px;
-  border-left: 4px solid var(--prop-bar-color, #7c3aed);
+  border-left: 4px solid var(--prop-bar-color, #f59e0b);
   cursor: pointer;
   transition: background 0.14s;
 }
 .under-prop-row:hover {
-  background: #2b2346;
+  background: #18285c;
 }
 .under-prop-ident {
   display: flex;
@@ -1721,7 +1859,7 @@ button, input, select {
   font-weight: 700;
 }
 
-/* زر الدردشة العائم البنفسجي */
+/* زر الدردشة العائم الذهبي الملكي */
 .floating-chat-btn {
   position: fixed;
   bottom: 22px;
@@ -1729,10 +1867,10 @@ button, input, select {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  color: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.5);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #060b1c;
+  border: 2px solid #fbbf24;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.5);
   font-size: 1.45rem;
   display: flex;
   align-items: center;

@@ -342,11 +342,15 @@ module.exports = async function handler(req, res) {
         const saved = sessions.get(sessionToken);
         if (saved.roomCode === code) existingPlayerId = saved.playerId;
       }
+      if (!existingPlayerId && body.playerId) {
+        existingPlayerId = body.playerId;
+      }
 
       const joined = Engine.joinRoom(room, {
         playerName: body.playerName,
         avatarId: body.avatarId,
-        existingPlayerId: existingPlayerId
+        existingPlayerId: existingPlayerId,
+        playerId: body.playerId
       });
       if (!joined.ok) return sendJson(res, 400, joined);
 

@@ -35,15 +35,17 @@
   };
 
   /**
-   * شخصيات Richup.io الدائرية المحبوبة (أعين كبيرة مميزة)
+   * قطع اللعب وشخصيات الحضارة العربية الأصيلة (رموز الفروسية والشهامة والكرم)
    */
   const PLAYER_PRESETS = [
-    { id: 'cyan', name: 'الأزرق السماوي', icon: '🔵', color: '#38bdf8', eyeTone: '#0284c7' },
-    { id: 'lime', name: 'الأخضر النيوني', icon: '🟢', color: '#4ade80', eyeTone: '#16a34a' },
-    { id: 'brown', name: 'البني الكلاسيكي', icon: '🟤', color: '#b45309', eyeTone: '#78350f' },
-    { id: 'coral', name: 'الأحمر المرجاني', icon: '🔴', color: '#f87171', eyeTone: '#dc2626' },
-    { id: 'purple', name: 'البنفسجي الملكي', icon: '🟣', color: '#a855f7', eyeTone: '#7e22ce' },
-    { id: 'orange', name: 'البرتقالي الحيوي', icon: '🟠', color: '#fb923c', eyeTone: '#ea580c' }
+    { id: 'falcon', name: 'الصقر العربي', icon: '🦅', color: '#d97706', eyeTone: '#b45309', badgeBg: 'linear-gradient(135deg, #d97706, #f59e0b)' },
+    { id: 'stallion', name: 'الخيل الأصيل', icon: '🐎', color: '#059669', eyeTone: '#047857', badgeBg: 'linear-gradient(135deg, #059669, #10b981)' },
+    { id: 'crown', name: 'تاج السلطان', icon: '👑', color: '#7c3aed', eyeTone: '#6d28d9', badgeBg: 'linear-gradient(135deg, #7c3aed, #a855f7)' },
+    { id: 'sword', name: 'السيف الدمشقي', icon: '⚔️', color: '#dc2626', eyeTone: '#b91c1c', badgeBg: 'linear-gradient(135deg, #dc2626, #f87171)' },
+    { id: 'lantern', name: 'مصباح الحكايات', icon: '🪔', color: '#0284c7', eyeTone: '#0369a1', badgeBg: 'linear-gradient(135deg, #0284c7, #38bdf8)' },
+    { id: 'dallah', name: 'الدلة العربية', icon: '☕', color: '#b45309', eyeTone: '#78350f', badgeBg: 'linear-gradient(135deg, #b45309, #d97706)' },
+    { id: 'dhow', name: 'البوم الشراعي', icon: '⛵', color: '#2563eb', eyeTone: '#1d4ed8', badgeBg: 'linear-gradient(135deg, #2563eb, #60a5fa)' },
+    { id: 'camel', name: 'هجين الصحراء', icon: '🐪', color: '#ca8a04', eyeTone: '#a16207', badgeBg: 'linear-gradient(135deg, #ca8a04, #eab308)' }
   ];
 
   /**

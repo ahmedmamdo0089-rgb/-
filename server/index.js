@@ -210,11 +210,15 @@ io.on('connection', (socket) => {
         existingPlayerId = saved.playerId;
       }
     }
+    if (!existingPlayerId && payload && payload.playerId) {
+      existingPlayerId = payload.playerId;
+    }
 
     const res = Engine.joinRoom(room, {
       playerName: payload && payload.playerName,
       avatarId: payload && payload.avatarId,
-      existingPlayerId
+      existingPlayerId: existingPlayerId,
+      playerId: payload && payload.playerId
     });
 
     if (!res.ok) return respond(res);

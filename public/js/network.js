@@ -598,11 +598,15 @@
         if (token && hostSessions[token]) {
           existingPlayerId = hostSessions[token];
         }
+        if (!existingPlayerId && p.playerId) {
+          existingPlayerId = p.playerId;
+        }
 
         const joined = Engine.joinRoom(hostRoom, {
           playerName: p.playerName,
           avatarId: p.avatarId,
-          existingPlayerId: existingPlayerId
+          existingPlayerId: existingPlayerId,
+          playerId: p.playerId
         });
 
         if (!joined.ok) {
@@ -1333,7 +1337,8 @@
           roomCode: code,
           playerName: payload.playerName,
           avatarId: payload.avatarId,
-          sessionToken: payload.sessionToken
+          sessionToken: payload.sessionToken,
+          playerId: payload.playerId
         }, 8000);
         if (res && res.ok) {
           currentRoomCode = res.roomCode;
@@ -1359,10 +1364,14 @@
       if (payload.sessionToken && payload.sessionToken.indexOf('local_') === 0) {
         existingPlayerId = payload.sessionToken.replace('local_', '');
       }
+      if (!existingPlayerId && payload.playerId) {
+        existingPlayerId = payload.playerId;
+      }
       const res = Engine.joinRoom(room, {
         playerName: payload.playerName,
         avatarId: payload.avatarId,
-        existingPlayerId: existingPlayerId
+        existingPlayerId: existingPlayerId,
+        playerId: payload.playerId
       });
       if (!res.ok) return res;
 

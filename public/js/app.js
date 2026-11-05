@@ -81,6 +81,7 @@
       'centerLiveFeed', 'underBoardArea', 'underBoardPlayers',
       'underBoardBankruptBtn', 'underBoardTradesBtn', 'underBoardProperties',
       'underPropsCount', 'underPropsList', 'floatingChatBtn', 'floatingChatBadge',
+      'resumeGameBox', 'resumeBoxRoomCode', 'resumeBoxPlayerName', 'resumeActiveGameBtn', 'dismissResumeGameBtn',
       'toastContainer'
     ];
     ids.forEach(function (id) {
@@ -114,11 +115,50 @@
     return formatMoney(n);
   }
 
-  function renderRichupAvatar(color, sizeClass) {
+  function getAvatarPreset(val) {
+    if (!val) return PLAYER_PRESETS[0];
+    if (typeof val === 'object' && val !== null) {
+      if (val.avatarId) {
+        const byId = PLAYER_PRESETS.find(function (p) { return p.id === val.avatarId; });
+        if (byId) return byId;
+      }
+      if (val.color) {
+        const byCol = PLAYER_PRESETS.find(function (p) { return p.color === val.color; });
+        if (byCol) return byCol;
+      }
+      if (val.icon) {
+        const byIcon = PLAYER_PRESETS.find(function (p) { return p.icon === val.icon; });
+        if (byIcon) return byIcon;
+      }
+    }
+    const match = PLAYER_PRESETS.find(function (p) {
+      return p.id === val || p.color === val || p.icon === val;
+    });
+    return match || PLAYER_PRESETS[0];
+  }
+
+  function renderRichupAvatar(param, sizeClass) {
+    let preset = null;
+    let icon = '🦅';
+    let color = '#d97706';
+    let bg = 'linear-gradient(135deg, #d97706, #f59e0b)';
+
+    if (typeof param === 'object' && param !== null) {
+      preset = getAvatarPreset(param);
+      icon = param.icon || preset.icon;
+      color = param.color || preset.color;
+      bg = preset.badgeBg || ('linear-gradient(135deg, ' + color + ', #f59e0b)');
+    } else {
+      preset = getAvatarPreset(param);
+      icon = preset.icon;
+      color = preset.color;
+      bg = preset.badgeBg;
+    }
+
     return (
-      '<div class="richup-avatar ' + (sizeClass || '') + '" style="--blob-color:' + (color || '#38bdf8') + '">' +
-      '<span class="richup-eye left"><span class="richup-pupil"></span></span>' +
-      '<span class="richup-eye right"><span class="richup-pupil"></span></span>' +
+      '<div class="arabian-avatar ' + (sizeClass || '') + '" style="--token-color:' + color + '; background:' + bg + ';" title="' + (preset ? preset.name : '') + '">' +
+        '<span class="avatar-arabian-icon">' + icon + '</span>' +
+        '<span class="avatar-gold-rim"></span>' +
       '</div>'
     );
   }
@@ -311,21 +351,46 @@
     }
   }
 
-  function saveSession(roomCode, playerId, sessionToken) {
+  function saveSession(roomCode, playerId, sessionToken, extra) {
     try {
-      localStorage.setItem('beh_last_name', els.playerNameInput.value.trim());
-      sessionStorage.setItem('beh_session_' + roomCode, JSON.stringify({
+      const name = (els.playerNameInput && els.playerNameInput.value.trim()) || (extra && extra.playerName) || 'لاعب';
+      const avatarId = ui.selectedAvatarId || (extra && extra.avatarId) || 'red';
+      const sessionData = {
         roomCode: roomCode,
         playerId: playerId,
-        sessionToken: sessionToken
-      }));
+        sessionToken: sessionToken,
+        playerName: name,
+        avatarId: avatarId,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('beh_last_name', name);
+      localStorage.setItem('beh_last_avatar', avatarId);
+      localStorage.setItem('beh_last_room', roomCode);
+      localStorage.setItem('beh_active_session', JSON.stringify(sessionData));
+      localStorage.setItem('beh_session_' + roomCode, JSON.stringify(sessionData));
+      sessionStorage.setItem('beh_session_' + roomCode, JSON.stringify(sessionData));
     } catch (_e) { }
   }
 
   function loadSession(roomCode) {
     try {
-      const raw = sessionStorage.getItem('beh_session_' + roomCode);
-      return raw ? JSON.parse(raw) : null;
+      if (roomCode) {
+        const fromSession = sessionStorage.getItem('beh_session_' + roomCode);
+        if (fromSession) return JSON.parse(fromSession);
+        const fromLocal = localStorage.getItem('beh_session_' + roomCode);
+        if (fromLocal) return JSON.parse(fromLocal);
+        return null;
+      }
+      // إذا لم يُمرر كود، نقرأ المباراة النشطة من localStorage
+      const rawActive = localStorage.getItem('beh_active_session');
+      if (!rawActive) return null;
+      const active = JSON.parse(rawActive);
+      // تنتهي صلاحية الجلسة المحفوظة بعد 12 ساعة من عدم النشاط
+      if (Date.now() - (active.timestamp || 0) > 12 * 60 * 60 * 1000) {
+        localStorage.removeItem('beh_active_session');
+        return null;
+      }
+      return active;
     } catch (_e) {
       return null;
     }
@@ -333,7 +398,28 @@
 
   function clearSession(roomCode) {
     try {
-      if (roomCode) sessionStorage.removeItem('beh_session_' + roomCode);
+      if (roomCode) {
+        sessionStorage.removeItem('beh_session_' + roomCode);
+        localStorage.removeItem('beh_session_' + roomCode);
+        const raw = localStorage.getItem('beh_active_session');
+        if (raw) {
+          const act = JSON.parse(raw);
+          if (act.roomCode === roomCode) {
+            localStorage.removeItem('beh_active_session');
+          }
+        }
+      } else {
+        localStorage.removeItem('beh_active_session');
+      }
+      localStorage.removeItem('beh_last_room');
+
+      // عند إنهاء الجيم أو استبعاد اللاعب أو الخروج، يتم قفل السمارت لينك مجدداً لطلب تفعيله عند أي مباراة جديدة
+      if (typeof BankElHazAds !== 'undefined' && typeof BankElHazAds.lockSmartlink === 'function') {
+        BankElHazAds.lockSmartlink();
+      }
+      if (typeof updateSmartlinkGateUI === 'function') {
+        updateSmartlinkGateUI();
+      }
     } catch (_e) { }
   }
 
@@ -352,7 +438,7 @@
       const selected = pr.id === ui.selectedAvatarId ? 'selected' : '';
       return (
         '<div class="avatar-option ' + selected + '" data-avatar-id="' + pr.id + '">' +
-        renderRichupAvatar(pr.color, 'sm') +
+        renderRichupAvatar(pr, 'sm') +
         '<span class="av-name">' + escapeHtml(pr.name) + '</span>' +
         '</div>'
       );
@@ -491,7 +577,7 @@
         seatsHtml +=
           '<div class="lobby-seat">' +
           '<div class="seat-left">' +
-          renderRichupAvatar(p.color, 'sm') +
+          renderRichupAvatar(p, 'sm') +
           '<div class="seat-meta">' +
           '<strong>' + escapeHtml(p.name) + '</strong>' +
           '<small>' + tags.join(' • ') + '</small>' +
@@ -595,14 +681,13 @@
         tokenEl.className = 'board-token';
         els.tokensLayer.appendChild(tokenEl);
       }
-      tokenEl.style.background = p.color;
-      if (!tokenEl.querySelector('.richup-token-eyes')) {
-        tokenEl.innerHTML =
-          '<div class="richup-token-eyes">' +
-          '<span class="richup-eye left"><span class="richup-pupil"></span></span>' +
-          '<span class="richup-eye right"><span class="richup-pupil"></span></span>' +
-          '</div>';
-      }
+      const preset = getAvatarPreset(p);
+      tokenEl.style.background = preset.badgeBg || p.color;
+      tokenEl.innerHTML =
+        '<div class="arabian-token-content">' +
+        '<span class="token-arabian-icon">' + (p.icon || preset.icon) + '</span>' +
+        '<span class="token-gold-border"></span>' +
+        '</div>';
       tokenEl.title = p.name;
       tokenEl.classList.toggle('active-player-token', Boolean(currentP && currentP.id === p.id));
     });
@@ -787,7 +872,7 @@
 
     // Mobile Top Summary
     if (me) {
-      els.mobileMyAvatar.innerHTML = renderRichupAvatar(me.color, 'xs');
+      els.mobileMyAvatar.innerHTML = renderRichupAvatar(me, 'xs');
       els.mobileMyAvatar.style.background = 'transparent';
       els.mobileMyName.textContent = me.name;
       els.mobileMyCash.textContent = me.bankrupt ? 'خاسر / مفلس 🏳️' : formatSignedCash(me.cash);
@@ -1011,7 +1096,7 @@
         '<div class="player-card ' + (isTurn ? 'active-turn ' : '') + (p.bankrupt ? 'is-bankrupt' : '') + '">' +
         '<div class="pc-top">' +
         '<div class="pc-ident">' +
-        renderRichupAvatar(p.color, 'sm') +
+        renderRichupAvatar(p, 'sm') +
         '<div>' +
         '<div class="pc-name">' + escapeHtml(p.name) + '</div>' +
         '<small style="color:#94a3b8;font-size:0.74rem">صافي الثروة: ' + formatSignedCash(p.netWorth) + '</small>' +
@@ -1041,7 +1126,7 @@
         return (
           '<div class="under-player-card ' + (isTurn ? 'active-turn ' : '') + (p.bankrupt ? 'is-bankrupt' : '') + '">' +
           '<div class="under-player-left">' +
-          renderRichupAvatar(p.color, 'sm') +
+          renderRichupAvatar(p, 'sm') +
           '<div class="under-player-info">' +
           '<div class="under-player-name">' +
           escapeHtml(p.name) +
@@ -1363,7 +1448,7 @@
         '<div class="deed-owner-pill">' +
         '<span>سعر الشراء: <strong>' + formatMoney(tile.price) + '</strong></span>' +
         '<span>المالك: <strong style="color:' + (owner ? owner.color : '#94a3b8') + '">' +
-        (owner ? (renderRichupAvatar(owner.color, 'xs') + ' ' + escapeHtml(owner.name)) : 'البنك (متاح للشراء)') +
+        (owner ? (renderRichupAvatar(owner, 'xs') + ' ' + escapeHtml(owner.name)) : 'البنك (متاح للشراء)') +
         '</strong></span>' +
         '</div>';
 
@@ -1593,6 +1678,8 @@
     }).join('');
 
     els.winnerModal.classList.remove('hidden');
+    clearSession(state.code);
+    if (els.resumeGameBox) els.resumeGameBox.classList.add('hidden');
     if (wasHidden) {
       AudioFX.win();
       if (Ads) Ads.refresh(els.winnerModal);
@@ -1606,6 +1693,28 @@
     ui.state = state;
     ui.roomCode = state.code;
     els.headerRoomCode.textContent = state.code;
+
+    // فحص حالة اللاعب في الغرفة: حفظ البيانات في حالة اللعب النشط فقط، ومسحها فوراً عند انتهاء الجيم أو الاستبعاد
+    const me = state.players ? state.players.find(function (p) { return p.id === ui.myPlayerId; }) : null;
+    if (state.status === 'FINISHED') {
+      clearSession(state.code);
+      if (els.resumeGameBox) els.resumeGameBox.classList.add('hidden');
+    } else if (me && me.bankrupt) {
+      clearSession(state.code);
+      if (els.resumeGameBox) els.resumeGameBox.classList.add('hidden');
+    } else if (ui.myPlayerId && state.players && state.players.length > 0 && !me && state.status !== 'LOBBY') {
+      clearSession(state.code);
+      if (els.resumeGameBox) els.resumeGameBox.classList.add('hidden');
+      showToast('تم استبعادك من المباراة أو إغلاقها.', 'info');
+      exitToHome();
+      return;
+    } else if (me && !me.bankrupt && state.status === 'PLAYING') {
+      const saved = loadSession(state.code);
+      saveSession(state.code, ui.myPlayerId, saved ? saved.sessionToken : null, {
+        playerName: me.name,
+        avatarId: me.avatarId || ui.selectedAvatarId
+      });
+    }
 
     if (state.status === 'LOBBY') {
       ui.cashInitialized = false;
@@ -1921,12 +2030,13 @@
     els.whatsappShareBtn.addEventListener('click', function () {
       if (!ui.roomCode) return;
       const url = buildInviteUrl(ui.roomCode);
-      const msg = '🏛️ تعال العب معايا "بنك الحظ المصري" أونلاين! ادخل الغرفة مباشرة من الرابط ده:\n' + url;
+      const msg = '🏛️ تعال العب معايا "بنك الحظ العربي" أونلاين! ادخل الغرفة مباشرة من الرابط ده:\n' + url;
       window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank', 'noopener');
     });
 
     function exitToHome() {
       clearSession(ui.roomCode);
+      if (els.resumeGameBox) els.resumeGameBox.classList.add('hidden');
       Network.leaveRoom().then(function () {
         ui.state = null;
         ui.roomCode = null;
@@ -1938,6 +2048,7 @@
         els.winnerModal.classList.add('hidden');
         window.history.replaceState({}, '', window.location.pathname);
         setScreen('landing');
+        updateSmartlinkGateUI();
       });
     }
 
@@ -1993,6 +2104,8 @@
         if (!me || me.bankrupt) return;
         if (window.confirm('هل أنت متأكد من إعلان إفلاسك والانسحاب من المباراة؟')) {
           AudioFX.bankrupt();
+          clearSession(ui.roomCode);
+          if (els.resumeGameBox) els.resumeGameBox.classList.add('hidden');
           dispatchGameAction({ type: 'BANKRUPT', targetId: ui.myPlayerId });
         }
       });
@@ -2232,6 +2345,62 @@
       });
     });
 
+    // صندوق العودة السريعة للمباراة الجارية (Resume Active Game Box)
+    if (els.resumeActiveGameBtn) {
+      els.resumeActiveGameBtn.addEventListener('click', function () {
+        const active = loadSession();
+        if (!active || !active.roomCode) return;
+        AudioFX.click();
+        els.resumeActiveGameBtn.disabled = true;
+        els.resumeActiveGameBtn.textContent = '⏳ جاري العودة للمباراة...';
+        Network.joinRoom({
+          roomCode: active.roomCode,
+          playerName: active.playerName || (els.playerNameInput && els.playerNameInput.value.trim()) || 'لاعب',
+          avatarId: active.avatarId || ui.selectedAvatarId,
+          sessionToken: active.sessionToken,
+          playerId: active.playerId
+        }).then(function (res) {
+          els.resumeActiveGameBtn.disabled = false;
+          els.resumeActiveGameBtn.textContent = '⚡ العودة للمباراة فوراً';
+          if (res && res.ok) {
+            ui.myPlayerId = res.playerId;
+            ui.roomCode = res.roomCode;
+            ui.cashInitialized = false;
+            saveSession(res.roomCode, res.playerId, res.sessionToken, active);
+            window.history.replaceState({}, '', '?room=' + encodeURIComponent(res.roomCode));
+            if (els.resumeGameBox) els.resumeGameBox.classList.add('hidden');
+            handleRoomState(res.state);
+            showToast('⚡ مرحباً بعودتك! تم استئناف اللعب في الغرفة #' + res.roomCode, 'success');
+          } else {
+            showToast((res && res.error) || 'تعذر استئناف المباراة.', 'error');
+            if (res && (res.error || '').indexOf('غير موجودة') !== -1) {
+              clearSession(active.roomCode);
+              if (els.resumeGameBox) els.resumeGameBox.classList.add('hidden');
+            }
+          }
+        });
+      });
+    }
+
+    if (els.dismissResumeGameBtn) {
+      els.dismissResumeGameBtn.addEventListener('click', function () {
+        AudioFX.click();
+        if (els.resumeGameBox) els.resumeGameBox.classList.add('hidden');
+      });
+    }
+
+    // حماية اللاعب من إغلاق التاب أو السحب بالخطأ أثناء جولة نشطة (beforeunload)
+    window.addEventListener('beforeunload', function (e) {
+      if (ui.state && ui.state.status === 'PLAYING') {
+        const me = ui.state.players ? ui.state.players.find(function (p) { return p.id === ui.myPlayerId; }) : null;
+        if (me && !me.bankrupt) {
+          e.preventDefault();
+          e.returnValue = 'لديك مباراة جارية حالياً! هل أنت متأكد من رغبتك في مغادرة اللعبة؟';
+          return e.returnValue;
+        }
+      }
+    });
+
     window.addEventListener('resize', function () {
       layoutAllTokensStatic(ui.state);
       if (Ads) Ads.refresh();
@@ -2242,12 +2411,28 @@
   function checkInviteUrlOnLoad() {
     try {
       const savedName = localStorage.getItem('beh_last_name');
-      if (savedName) els.playerNameInput.value = savedName;
+      if (savedName && els.playerNameInput) els.playerNameInput.value = savedName;
+      const savedAvatar = localStorage.getItem('beh_last_avatar');
+      if (savedAvatar) {
+        ui.selectedAvatarId = savedAvatar;
+        renderAvatarPicker();
+      }
     } catch (_e) { }
 
     const params = new URLSearchParams(window.location.search);
     const roomParam = (params.get('room') || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    if (!roomParam) return;
+    if (!roomParam) {
+      // فحص وجود جلسة مباراة نشطة في المتصفح لعرض صندوق العودة السريعة
+      const activeSession = loadSession();
+      if (activeSession && activeSession.roomCode) {
+        if (els.resumeGameBox && els.resumeBoxRoomCode && els.resumeBoxPlayerName) {
+          els.resumeBoxRoomCode.textContent = activeSession.roomCode;
+          els.resumeBoxPlayerName.textContent = activeSession.playerName || 'لاعب';
+          els.resumeGameBox.classList.remove('hidden');
+        }
+      }
+      return;
+    }
 
     els.joinRoomCodeInput.value = roomParam;
     els.inviteBanner.classList.remove('hidden');
@@ -2261,20 +2446,22 @@
     });
 
     const existingSession = loadSession(roomParam);
-    if (existingSession && existingSession.sessionToken) {
+    if (existingSession && (existingSession.sessionToken || existingSession.playerId)) {
       setTimeout(function () {
         Network.joinRoom({
           roomCode: roomParam,
-          playerName: els.playerNameInput.value.trim() || 'لاعب',
-          avatarId: ui.selectedAvatarId,
-          sessionToken: existingSession.sessionToken
+          playerName: existingSession.playerName || (els.playerNameInput && els.playerNameInput.value.trim()) || 'لاعب',
+          avatarId: existingSession.avatarId || ui.selectedAvatarId,
+          sessionToken: existingSession.sessionToken,
+          playerId: existingSession.playerId
         }).then(function (res) {
           if (res && res.ok) {
             ui.myPlayerId = res.playerId;
             ui.roomCode = res.roomCode;
+            saveSession(res.roomCode, res.playerId, res.sessionToken, existingSession);
             handleRoomState(res.state);
             if (res.reconnected) {
-              showToast('🔄 تمت إعادة اتصالك بالغرفة تلقائياً!', 'success');
+              showToast('🔄 تمت استعادة مقعدك ورصيدك ومتابعة المباراة بنجاح!', 'success');
             }
           }
         });

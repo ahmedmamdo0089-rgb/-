@@ -266,7 +266,7 @@
     if (room.players.length >= GAME_CONFIG.MAX_PLAYERS) {
       return { ok: false, error: 'الغرفة وصلت للحد الأقصى (6 لاعبين).' };
     }
-    const botNames = ['المعلم زكي 🤖', 'الباشا منصور 🤖', 'الحاج عبد الغفور 🤖', 'الكابتن ماجد 🤖', 'الأستاذة سلمى 🤖'];
+    const botNames = ['التاجر شهبندر 🤖', 'الشيخ منصور 🤖', 'السلطان قلاوون 🤖', 'ابن بطوطة 🤖', 'الأميرة شهرزاد 🤖', 'السندباد البحري 🤖'];
     const usedNames = new Set(room.players.map(function (p) { return p.name; }));
     const botName = botNames.find(function (n) { return !usedNames.has(n); }) || ('بوت ذكي ' + (room.players.length + 1));
 
@@ -393,7 +393,7 @@
     });
 
     const first = room.players[0];
-    addLog(room, 'بدأت مباراة بنك الحظ المصري! الدور الأول عند ' + first.name + ' 🎲', 'info');
+    addLog(room, 'بدأت مباراة بنك الحظ العربي! الدور الأول عند ' + first.name + ' 🎲', 'info');
     room.updatedAt = Date.now();
     return { ok: true };
   }
@@ -1264,7 +1264,7 @@
         room.winnerId = active[0].id;
         room.finishReason = 'LAST_STANDING';
         room.turnPhase = 'END_TURN';
-        addLog(room, '🏆 ألف مبروك! فاز ' + active[0].name + ' بلقب إمبراطور بنك الحظ المصري بعد إفلاس وخسارة جميع المنافسين!', 'win');
+        addLog(room, '🏆 ألف مبروك! فاز ' + active[0].name + ' بلقب إمبراطور بنك الحظ العربي بعد إفلاس وخسارة جميع المنافسين!', 'win');
       }
       return;
     }
