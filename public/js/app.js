@@ -70,7 +70,7 @@
       'parkingPotBadge', 'die1', 'die2', 'diceResultLabel', 'drawnCardBanner',
       'turnBanner', 'actionButtonsContainer', 'tokensLayer',
       'activeTradesBox', 'unreadChatBadge', 'eventLogs', 'chatMessages', 'chatForm', 'chatInput',
-      'mobileBottomNav', 'mobTradeBadge', 'mobChatBadge',
+      'drawerSocialTitle', 'mobileBottomNav', 'mobTradeBadge', 'mobChatBadge',
       'tileModal', 'tileModalBody',
       'tradeModal', 'tradeModalTitle', 'tradeCounterHint',
       'tradeTargetSelect', 'tradeMyMaxCashHint', 'tradeTheirMaxCashHint',
@@ -80,7 +80,8 @@
       'winnerModal', 'winnerTitle', 'winnerSubtitle', 'winnerStandings', 'winnerExitBtn',
       'centerLiveFeed', 'underBoardArea', 'underBoardPlayers',
       'underBoardBankruptBtn', 'underBoardTradesBtn', 'underBoardProperties',
-      'underPropsCount', 'underPropsList', 'floatingChatBtn', 'floatingChatBadge',
+      'underPropsCount', 'underPropsList',
+      'floatingActionsDock', 'floatingLogBtn', 'floatingChatBtn', 'floatingChatBadge',
       'resumeGameBox', 'resumeBoxRoomCode', 'resumeBoxPlayerName', 'resumeActiveGameBtn', 'dismissResumeGameBtn',
       'toastContainer'
     ];
@@ -251,12 +252,19 @@
     const rect = targetEl.getBoundingClientRect();
     if (!rect || (rect.width === 0 && rect.height === 0)) return false;
 
+    // Check if within visible bounds
+    if (rect.bottom < 0 || rect.top > (window.innerHeight || document.documentElement.clientHeight) ||
+        rect.right < 0 || rect.left > (window.innerWidth || document.documentElement.clientWidth)) {
+      return false;
+    }
+
     const layer = ensureCashFxLayer();
     const badge = document.createElement('div');
     badge.className = 'cash-fly-badge ' + (isPlus ? 'plus' : 'minus');
     badge.textContent = text;
+    // تموضع المبلغ الطائر مباشرة فوق اسم اللاعب أو قطعته
     badge.style.left = Math.round(rect.left + rect.width / 2) + 'px';
-    badge.style.top = Math.round(rect.top + rect.height / 2) + 'px';
+    badge.style.top = Math.round(rect.top - 8) + 'px';
     layer.appendChild(badge);
 
     const bumpClass = isPlus ? 'cash-bump-plus' : 'cash-bump-minus';
@@ -266,11 +274,11 @@
 
     setTimeout(function () {
       targetEl.classList.remove(bumpClass);
-    }, 550);
+    }, 600);
 
     setTimeout(function () {
       if (badge.parentNode) badge.parentNode.removeChild(badge);
-    }, 1400);
+    }, 1500);
     return true;
   }
 
@@ -295,27 +303,42 @@
       if (delta === 0) return;
 
       const isPlus = delta > 0;
-      const sign = isPlus ? '+' : '-';
+      const sign = isPlus ? '+ ' : '- ';
       const absStr = Math.abs(delta).toLocaleString('en-US');
-      const deltaText = sign + absStr + ' ج.م';
+      const deltaText = sign + '$' + absStr;
 
-      let shownAny = false;
-      if (p.id === ui.myPlayerId && els.mobileMyCash) {
-        if (spawnBadgeAtElement(els.mobileMyCash, deltaText, isPlus)) {
-          shownAny = true;
-        }
+      // تأثير صوتي عند الإضافة (+) أو الخصم (-)
+      try {
+        if (isPlus) AudioFX.buy();
+        else AudioFX.rent();
+      } catch (_e) { }
+
+      // 1) إظهار المبلغ الطائر مباشرة فوق اسم اللاعب في منطقة تحت اللوحة (الموبايل والكمبيوتر)
+      const underNameEl = document.getElementById('underPlayerName_' + p.id);
+      if (underNameEl) {
+        spawnBadgeAtElement(underNameEl, deltaText, isPlus);
       }
 
+      // 2) إظهار المبلغ الطائر فوق قطعة اللاعب المتحركة على الرقعة
+      const tokenEl = document.getElementById('token_' + p.id);
+      if (tokenEl) {
+        spawnBadgeAtElement(tokenEl, deltaText, isPlus);
+      }
+
+      // 3) إظهار المبلغ الطائر فوق اسم اللاعب في القائمة الجانبية (شاشات الكمبيوتر)
+      const pcNameEl = document.getElementById('pcName_' + p.id);
+      if (pcNameEl) {
+        spawnBadgeAtElement(pcNameEl, deltaText, isPlus);
+      }
+
+      // 4) بدائل احتياطية للأرصدة
+      const underCashEl = document.getElementById('underPlayerCash_' + p.id);
+      if (underCashEl && !underNameEl) {
+        spawnBadgeAtElement(underCashEl, deltaText, isPlus);
+      }
       const pcCashEl = document.getElementById('pcCash_' + p.id);
-      if (pcCashEl) {
-        if (spawnBadgeAtElement(pcCashEl, deltaText, isPlus)) {
-          shownAny = true;
-        }
-      }
-
-      // On mobile when side drawer is closed, show other players' cash changes near turn pill
-      if (!shownAny && els.mobileTurnBadge) {
-        spawnBadgeAtElement(els.mobileTurnBadge, p.icon + ' ' + deltaText, isPlus);
+      if (pcCashEl && !pcNameEl) {
+        spawnBadgeAtElement(pcCashEl, deltaText, isPlus);
       }
     });
   }
@@ -1098,7 +1121,7 @@
         '<div class="pc-ident">' +
         renderRichupAvatar(p, 'sm') +
         '<div>' +
-        '<div class="pc-name">' + escapeHtml(p.name) + '</div>' +
+        '<div class="pc-name" id="pcName_' + p.id + '">' + escapeHtml(p.name) + '</div>' +
         '<small style="color:#94a3b8;font-size:0.74rem">صافي الثروة: ' + formatSignedCash(p.netWorth) + '</small>' +
         '</div>' +
         '</div>' +
@@ -1124,11 +1147,11 @@
         const cashText = p.bankrupt ? 'خسر 🏳️' : formatSignedCash(p.cash);
 
         return (
-          '<div class="under-player-card ' + (isTurn ? 'active-turn ' : '') + (p.bankrupt ? 'is-bankrupt' : '') + '">' +
+          '<div class="under-player-card ' + (isTurn ? 'active-turn ' : '') + (p.bankrupt ? 'is-bankrupt' : '') + '" id="underPlayerCard_' + p.id + '">' +
           '<div class="under-player-left">' +
           renderRichupAvatar(p, 'sm') +
           '<div class="under-player-info">' +
-          '<div class="under-player-name">' +
+          '<div class="under-player-name" id="underPlayerName_' + p.id + '">' +
           escapeHtml(p.name) +
           (isHost ? ' 👑' : '') +
           (isMe ? ' <span class="me-pill">أنت</span>' : '') +
@@ -1137,7 +1160,7 @@
           (p.inJail ? '<div class="under-player-status jail">⛓️ في السجن</div>' : '') +
           '</div>' +
           '</div>' +
-          '<div class="' + cashClass + '" style="direction:ltr">' + cashText + '</div>' +
+          '<div class="' + cashClass + '" id="underPlayerCash_' + p.id + '" style="direction:ltr">' + cashText + '</div>' +
           '</div>'
         );
       }).join('');
@@ -1279,7 +1302,9 @@
     });
 
     const incomingTrades = myTrades.filter(function (t) { return t.toId === ui.myPlayerId; });
-    els.mobTradeBadge.classList.toggle('hidden', incomingTrades.length === 0);
+    if (els.mobTradeBadge) {
+      els.mobTradeBadge.classList.toggle('hidden', incomingTrades.length === 0);
+    }
 
     // Prominent on-screen banner for incoming trades (visible on both mobile & desktop)
     if (els.incomingTradeBanner) {
@@ -1348,15 +1373,28 @@
       ui.lastLogId = newest.id;
     }
 
-    els.eventLogs.innerHTML = (state.logs || []).map(function (lg) {
-      return '<div class="log-entry ' + escapeHtml(lg.type) + '">' + escapeHtml(lg.text) + '</div>';
-    }).join('');
+    if (els.eventLogs) {
+      const logs = state.logs || [];
+      if (logs.length === 0) {
+        els.eventLogs.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px 10px;font-size:0.86rem">لا توجد أحداث مسجلة بعد. ستبدأ التسجيلات فور رمي النرد! 📜</div>';
+      } else {
+        els.eventLogs.innerHTML = logs.map(function (lg) {
+          const typeClass = lg.type ? escapeHtml(lg.type) : 'info';
+          return '<div class="log-entry ' + typeClass + '">' + escapeHtml(lg.text) + '</div>';
+        }).join('');
+      }
+    }
 
     if (els.centerLiveFeed) {
-      const recent = (state.logs || []).slice(0, 6);
-      els.centerLiveFeed.innerHTML = recent.map(function (lg) {
-        return '<div class="feed-entry">' + escapeHtml(lg.text) + '</div>';
-      }).join('');
+      const recent = (state.logs || []).slice(0, 8);
+      if (recent.length === 0) {
+        els.centerLiveFeed.innerHTML = '<div class="feed-entry" style="color:#94a3b8">📜 تبدأ الأحداث مع أول حركة على الرقعة...</div>';
+      } else {
+        els.centerLiveFeed.innerHTML = recent.map(function (lg) {
+          const typeClass = lg.type ? (' feed-' + escapeHtml(lg.type)) : '';
+          return '<div class="feed-entry' + typeClass + '">' + escapeHtml(lg.text) + '</div>';
+        }).join('');
+      }
     }
 
     const chatArr = state.chat || [];
@@ -1365,36 +1403,42 @@
       const latestMsg = chatArr[chatArr.length - 1];
       if (ui.lastChatCount > 0 && latestMsg && latestMsg.senderId !== ui.myPlayerId) {
         AudioFX.click();
-        if (ui.activeLeftTab !== 'chat' || (window.innerWidth <= 1040 && ui.activeMobileView !== 'social')) {
+        if (ui.activeLeftTab !== 'chat' || (window.innerWidth <= 1040 && ui.activeMobileView !== 'social' && ui.activeMobileView !== 'chat')) {
           ui.unreadChat += added;
         }
       }
       ui.lastChatCount = chatArr.length;
     }
 
-    els.unreadChatBadge.textContent = String(ui.unreadChat);
-    els.unreadChatBadge.classList.toggle('hidden', ui.unreadChat === 0);
-    els.mobChatBadge.textContent = String(ui.unreadChat);
-    els.mobChatBadge.classList.toggle('hidden', ui.unreadChat === 0);
+    if (els.unreadChatBadge) {
+      els.unreadChatBadge.textContent = String(ui.unreadChat);
+      els.unreadChatBadge.classList.toggle('hidden', ui.unreadChat === 0);
+    }
+    if (els.mobChatBadge) {
+      els.mobChatBadge.textContent = String(ui.unreadChat);
+      els.mobChatBadge.classList.toggle('hidden', ui.unreadChat === 0);
+    }
     if (els.floatingChatBadge) {
       els.floatingChatBadge.textContent = String(ui.unreadChat);
       els.floatingChatBadge.classList.toggle('hidden', ui.unreadChat === 0);
     }
 
-    els.chatMessages.innerHTML = chatArr.length === 0
-      ? '<div style="text-align:center;color:#94a3b8;padding:18px;font-size:0.8rem">ابدأ الدردشة مع أصدقائك في الغرفة! 💬</div>'
-      : chatArr.map(function (m) {
-        const mine = m.senderId === ui.myPlayerId;
-        return (
-          '<div class="chat-bubble ' + (mine ? 'mine' : '') + '">' +
-          '<div class="chat-sender" style="color:' + m.senderColor + '">' +
-          m.senderIcon + ' ' + escapeHtml(m.senderName) +
-          '</div>' +
-          '<div>' + escapeHtml(m.text) + '</div>' +
-          '</div>'
-        );
-      }).join('');
-    els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+    if (els.chatMessages) {
+      els.chatMessages.innerHTML = chatArr.length === 0
+        ? '<div style="text-align:center;color:#94a3b8;padding:18px;font-size:0.8rem">ابدأ الدردشة مع أصدقائك في الغرفة! 💬</div>'
+        : chatArr.map(function (m) {
+          const mine = m.senderId === ui.myPlayerId;
+          return (
+            '<div class="chat-bubble ' + (mine ? 'mine' : '') + '">' +
+            '<div class="chat-sender" style="color:' + m.senderColor + '">' +
+            m.senderIcon + ' ' + escapeHtml(m.senderName) +
+            '</div>' +
+            '<div>' + escapeHtml(m.text) + '</div>' +
+            '</div>'
+          );
+        }).join('');
+      els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
+    }
   }
 
   // ==================== Property Deed Modal (Enlarged & Mobile-Friendly) ====================
@@ -1816,9 +1860,14 @@
       if (els.drawerPlayers) els.drawerPlayers.classList.add('mobile-open');
       activateRightSubtab('assets');
       if (Ads) Ads.refresh(els.drawerPlayers);
-    } else if (view === 'social') {
+    } else if (view === 'social' || view === 'chat') {
       if (els.drawerSocial) els.drawerSocial.classList.add('mobile-open');
       activateLeftSubtab('chat');
+      if (Ads) Ads.refresh(els.drawerSocial);
+    } else if (view === 'log' || view === 'events') {
+      if (els.drawerSocial) els.drawerSocial.classList.add('mobile-open');
+      activateLeftSubtab('log');
+      if (Ads) Ads.refresh(els.drawerSocial);
     } else if (view === 'trade') {
       if (ui.state && ui.state.trades && ui.state.trades.some(function (t) { return t.toId === ui.myPlayerId; })) {
         if (els.drawerSocial) els.drawerSocial.classList.add('mobile-open');
@@ -1840,14 +1889,21 @@
     ui.activeLeftTab = tab;
     if (tab === 'chat') {
       ui.unreadChat = 0;
-      els.unreadChatBadge.classList.add('hidden');
-      els.mobChatBadge.classList.add('hidden');
+      if (els.unreadChatBadge) els.unreadChatBadge.classList.add('hidden');
+      if (els.mobChatBadge) els.mobChatBadge.classList.add('hidden');
+      if (els.floatingChatBadge) els.floatingChatBadge.classList.add('hidden');
     }
     document.querySelectorAll('[data-left-tab]').forEach(function (b) {
       b.classList.toggle('active', b.dataset.leftTab === tab);
     });
-    document.getElementById('logTabContent').classList.toggle('active', tab === 'log');
-    document.getElementById('chatTabContent').classList.toggle('active', tab === 'chat');
+    const logTab = document.getElementById('logTabContent');
+    const chatTab = document.getElementById('chatTabContent');
+    if (logTab) logTab.classList.toggle('active', tab === 'log');
+    if (chatTab) chatTab.classList.toggle('active', tab === 'chat');
+
+    if (els.drawerSocialTitle) {
+      els.drawerSocialTitle.textContent = tab === 'log' ? '📜 سجل أحداث ومجريات المباراة' : '💬 المحادثة والصفقات المباشرة';
+    }
   }
 
   function switchToAssetsView() {
@@ -2121,11 +2177,31 @@
     if (els.floatingChatBtn) {
       els.floatingChatBtn.addEventListener('click', function () {
         AudioFX.click();
-        if (els.drawerSocial && els.drawerSocial.classList.contains('mobile-open')) {
+        if (els.drawerSocial && els.drawerSocial.classList.contains('mobile-open') && ui.activeLeftTab === 'chat') {
           setMobileView('board');
         } else {
-          setMobileView('social');
+          setMobileView('chat');
         }
+      });
+    }
+
+    if (els.floatingLogBtn) {
+      els.floatingLogBtn.addEventListener('click', function () {
+        AudioFX.click();
+        if (els.drawerSocial && els.drawerSocial.classList.contains('mobile-open') && ui.activeLeftTab === 'log') {
+          setMobileView('board');
+        } else {
+          setMobileView('log');
+        }
+      });
+    }
+
+    if (els.centerLiveFeed) {
+      els.centerLiveFeed.style.cursor = 'pointer';
+      els.centerLiveFeed.title = 'اضغط لعرض سجل الأحداث الكامل';
+      els.centerLiveFeed.addEventListener('click', function () {
+        AudioFX.click();
+        setMobileView('log');
       });
     }
 

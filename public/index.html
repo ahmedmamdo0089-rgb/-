@@ -521,7 +521,7 @@
       <!-- اللوحة اليسرى: المقايضات، الدردشة، وسجل الأحداث -->
       <aside id="drawerSocial" class="side-panel panel-social">
         <div class="mobile-drawer-header">
-          <h3>💬 المقايضات والدردشة</h3>
+          <h3 id="drawerSocialTitle">📜 سجل الأحداث والدردشة</h3>
           <button class="drawer-close-btn" data-close-drawer type="button">✕</button>
         </div>
 
@@ -554,11 +554,16 @@
       </aside>
     </div>
 
-    <!-- زر الدردشة العائم البنفسجي (Richup Floating Chat) -->
-    <button id="floatingChatBtn" class="floating-chat-btn" type="button" aria-label="فتح الدردشة">
-      <span>💬</span>
-      <span id="floatingChatBadge" class="floating-chat-badge hidden">0</span>
-    </button>
+    <!-- الأزرار العائمة الملكية (سجل الأحداث والدردشة المباشرة) -->
+    <div id="floatingActionsDock" class="floating-actions-dock">
+      <button id="floatingLogBtn" class="floating-action-btn floating-log-btn" type="button" aria-label="عرض الأحداث" title="📜 سجل أحداث المباراة">
+        <span>📜</span>
+      </button>
+      <button id="floatingChatBtn" class="floating-action-btn floating-chat-btn" type="button" aria-label="فتح الدردشة" title="💬 الدردشة الفورية">
+        <span>💬</span>
+        <span id="floatingChatBadge" class="floating-chat-badge hidden">0</span>
+      </button>
+    </div>
   </section>
 
   <!-- نافذة صك الملكية وتفاصيل المحافظة -->
