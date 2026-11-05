@@ -1,7 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const Engine = require('../public/js/shared/gameEngine');
+const Engine = require('./gameEngine');
 
 // Persist across warm invocations on Vercel Serverless container
 const globalStore = globalThis;

@@ -106,7 +106,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=5.1" />
+  <link rel="stylesheet" href="css/styles.css?v=5.3" />
 </head>
 <body>
   <!-- شريط علوي ثابت -->
@@ -194,6 +194,24 @@
         <div class="form-section">
           <label class="field-label">🎭 اختر قطعة اللعب واللون</label>
           <div id="avatarPickerGrid" class="avatar-picker-grid"></div>
+        </div>
+
+        <!-- صندوق تفعيل السمارت لينك لفتح إنشاء الغرفة أو الانضمام -->
+        <div id="smartlinkGateBox" class="smartlink-gate-box">
+          <div class="smartlink-gate-info">
+            <span class="smartlink-gate-icon">🎁</span>
+            <div class="smartlink-gate-text">
+              <strong id="smartlinkGateTitle">خطوة تفعيل اللعبة مجاناً 🚀</strong>
+              <small id="smartlinkGateDesc">اضغط على الزر بالأسفل مرة واحدة لفتح إمكانية إنشاء الغرف والانضمام ودعم اللعبة مجاناً.</small>
+            </div>
+          </div>
+          <button id="smartlinkActionBtn" class="btn btn-smartlink-unlock full-width" type="button">
+            <span class="btn-sparkle">✨</span>
+            <span id="smartlinkBtnText">اضغط هنا لفتح إنشاء الغرفة والانضمام (مجاناً) ↗</span>
+          </button>
+          <div id="smartlinkUnlockedBadge" class="smartlink-unlocked-badge hidden">
+            <span>✅</span> تم تفعيل اللعبة بنجاح! متاح إنشاء الغرف والانضمام الآن.
+          </div>
         </div>
 
         <div class="landing-actions-grid">
@@ -515,26 +533,6 @@
       </aside>
     </div>
 
-    <!-- شريط تنقل سفلي للهواتف المحمولة -->
-    <nav id="mobileBottomNav" class="mobile-bottom-nav">
-      <button class="mob-nav-btn active" data-mob-nav="board" type="button">
-        <span>🗺️</span><small>الخريطة</small>
-      </button>
-      <button class="mob-nav-btn" data-mob-nav="players" type="button">
-        <span>👥</span><small>اللاعبون</small>
-      </button>
-      <button class="mob-nav-btn" data-mob-nav="assets" type="button">
-        <span>🏛️</span><small>أملاكي</small>
-      </button>
-      <button class="mob-nav-btn" data-mob-nav="trade" type="button">
-        <span>🤝</span><small>مقايضة</small>
-        <em id="mobTradeBadge" class="mob-badge hidden">!</em>
-      </button>
-      <button class="mob-nav-btn" data-mob-nav="social" type="button">
-        <span>💬</span><small>الدردشة</small>
-        <em id="mobChatBadge" class="mob-badge hidden">0</em>
-      </button>
-    </nav>
     <!-- زر الدردشة العائم البنفسجي (Richup Floating Chat) -->
     <button id="floatingChatBtn" class="floating-chat-btn" type="button" aria-label="فتح الدردشة">
       <span>💬</span>
@@ -635,17 +633,36 @@
     </div>
   </div>
 
+  <!-- نافذة التفعيل الإجباري بالسمارت لينك لفتح اللعبة ودعم السيرفرات -->
+  <div id="smartlinkModal" class="modal-backdrop hidden">
+    <div class="modal-card smartlink-modal-card">
+      <div class="smartlink-modal-header">
+        <div class="smartlink-modal-icon">🎁</div>
+        <h3>تفعيل اللعب المجاني 🚀</h3>
+        <p>لدعم استمرار خوادم وسيرفرات بنك الحظ مجاناً، يرجى الضغط مرة واحدة على الزر بالأسفل لفتح إنشاء الغرفة أو الانضمام والبدء فوراً!</p>
+      </div>
+      <div class="smartlink-modal-body">
+        <button id="smartlinkModalConfirmBtn" class="btn btn-gold btn-xl full-width smartlink-pulse-btn" type="button">
+          ✨ اضغط هنا لتفعيل اللعبة وبدء اللعب الآن ↗
+        </button>
+        <div class="smartlink-note">
+          🔒 الضغط مرة واحدة كافٍ لفتح كافة ميزات اللعبة خلال جلستك.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- حاوية الإشعارات الفورية -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <!-- تحميل Socket.io (عند تشغيل خادم Node.js) + محرك الغرف السحابية العالمي v5.1 + مدير الإعلانات المفعّل -->
+  <!-- تحميل Socket.io (عند تشغيل خادم Node.js) + محرك الغرف السحابية العالمي v5.3 + مدير الإعلانات المفعّل -->
   <script src="/socket.io/socket.io.js" onerror="window.__NO_SOCKET_IO__=true"></script>
-  <script src="js/shared/gameData.js?v=5.1"></script>
-  <script src="js/shared/gameEngine.js?v=5.1"></script>
-  <script src="js/audio.js?v=5.1"></script>
-  <script src="js/ads.js?v=5.1"></script>
-  <script src="js/network.js?v=5.1"></script>
-  <script src="js/app.js?v=5.1"></script>
+  <script src="js/shared/gameData.js?v=5.3"></script>
+  <script src="js/shared/gameEngine.js?v=5.3"></script>
+  <script src="js/audio.js?v=5.3"></script>
+  <script src="js/ads.js?v=5.3"></script>
+  <script src="js/network.js?v=5.3"></script>
+  <script src="js/app.js?v=5.3"></script>
 </body>
 </html>
 

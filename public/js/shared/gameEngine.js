@@ -211,13 +211,30 @@
 
   function joinRoom(room, opts) {
     const options = opts || {};
+    let existing = null;
+
     if (options.existingPlayerId) {
-      const existing = getPlayer(room, options.existingPlayerId);
-      if (existing) {
-        existing.connected = true;
-        room.updatedAt = Date.now();
-        return { ok: true, player: existing, reconnected: true };
+      existing = getPlayer(room, options.existingPlayerId);
+    }
+    if (!existing && options.playerId) {
+      existing = getPlayer(room, options.playerId);
+    }
+    // دعم إعادة دخول اللاعب المنقطع تلقائياً بنفس الاسم حتى بعد بدء المباراة أو إغلاق المتصفح
+    if (!existing && options.playerName) {
+      const reqName = String(options.playerName).trim().toLowerCase();
+      existing = room.players.find(function (p) {
+        return !p.isBot && p.name.trim().toLowerCase() === reqName && (!p.connected || room.status === 'PLAYING');
+      });
+    }
+
+    if (existing) {
+      existing.connected = true;
+      if (options.avatarId && !existing.avatarId) {
+        existing.avatarId = options.avatarId;
       }
+      room.updatedAt = Date.now();
+      addLog(room, '🔄 عاد ' + existing.name + ' (' + existing.icon + ') إلى المباراة واستأنف اللعب!', 'info');
+      return { ok: true, player: existing, reconnected: true };
     }
 
     if (room.status !== 'LOBBY') {

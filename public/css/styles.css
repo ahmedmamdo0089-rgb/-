@@ -441,6 +441,161 @@ button, input, select {
   margin-top: 8px;
 }
 
+/* ==================== صندوق تفعيل السمارت لينك لفتح اللعبة ==================== */
+.smartlink-gate-box {
+  background: linear-gradient(135deg, rgba(245, 185, 66, 0.12), rgba(139, 92, 246, 0.15));
+  border: 1.5px solid rgba(245, 185, 66, 0.45);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 10px 0 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.25s, background 0.25s;
+}
+
+.smartlink-gate-box.is-unlocked {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.smartlink-gate-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.smartlink-gate-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 6px rgba(245, 185, 66, 0.5));
+}
+
+.smartlink-gate-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.smartlink-gate-text strong {
+  font-size: 0.95rem;
+  color: var(--gold-bright, #facc15);
+  font-weight: 800;
+}
+
+.smartlink-gate-text small {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.btn-smartlink-unlock {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 0.96rem;
+  padding: 13px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.45);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.16s, box-shadow 0.16s;
+  animation: smartlinkPulse 2.2s infinite ease-in-out;
+}
+
+.btn-smartlink-unlock:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 6px 22px rgba(245, 158, 11, 0.65);
+}
+
+.btn-smartlink-unlock:active {
+  transform: scale(0.98);
+}
+
+.smartlink-unlocked-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid #10b981;
+  color: #34d399;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* نافذة التفعيل الإجباري بالسمارت لينك (Smartlink Modal) */
+.smartlink-modal-card {
+  max-width: 440px;
+  text-align: center;
+  background: linear-gradient(180deg, #181329 0%, #0f172a 100%);
+  border: 1.5px solid rgba(245, 185, 66, 0.5);
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 185, 66, 0.2);
+  padding: 24px 20px;
+  border-radius: 20px;
+}
+
+.smartlink-modal-icon {
+  font-size: 3rem;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 4px 12px rgba(245, 185, 66, 0.5));
+  animation: floatBounce 2.5s infinite ease-in-out;
+}
+
+.smartlink-modal-header h3 {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #facc15;
+  margin-bottom: 8px;
+}
+
+.smartlink-modal-header p {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.smartlink-pulse-btn {
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+  padding: 15px 18px !important;
+  border-radius: 14px !important;
+  box-shadow: 0 6px 25px rgba(245, 185, 66, 0.5) !important;
+  animation: smartlinkPulse 2s infinite ease-in-out;
+}
+
+.smartlink-note {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 12px;
+}
+
+@keyframes smartlinkPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 18px rgba(245, 158, 11, 0.45);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 8px 28px rgba(245, 158, 11, 0.75);
+  }
+}
+
+@keyframes floatBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
 .action-box {
   background: rgba(8, 15, 35, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -2576,32 +2731,36 @@ button, input, select {
 
   /* تصميم الرقعة المربعة 1:1 للهاتف بأسلوب Richup.io الأصلي مع التدفق العمودي */
   .board-stage {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch;
-    padding: 4px 0 40px 0;
+    padding: 4px 0 60px 0 !important;
+    box-sizing: border-box !important;
   }
 
   .board-scroll-wrapper {
-    width: 100%;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 100% !important;
+    max-width: 520px !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     padding: 2px 0;
+    margin: 0 auto !important;
   }
 
   .board-grid {
-    aspect-ratio: 1 / 1;
-    width: min(98vw, 98vh, 520px);
-    max-width: 520px;
-    height: auto;
+    aspect-ratio: 1 / 1 !important;
+    width: min(98vw, 98vh, 520px) !important;
+    max-width: 520px !important;
+    height: auto !important;
     min-height: unset;
     border-width: 2px;
     border-radius: 12px;
@@ -2609,17 +2768,19 @@ button, input, select {
     padding: 2.5px;
     grid-template-columns: 1.15fr repeat(9, 1fr) 1.15fr;
     grid-template-rows: 1.15fr repeat(9, 1fr) 1.15fr;
-    margin: 2px auto 6px auto;
+    margin: 2px auto 6px auto !important;
   }
 
   .under-board-area {
-    width: 100%;
-    max-width: 520px;
-    margin: 4px auto 30px auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 0 8px;
+    width: 100% !important;
+    max-width: 520px !important;
+    margin: 4px auto 50px auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex-shrink: 0 !important;
+    gap: 10px !important;
+    padding: 0 8px !important;
+    box-sizing: border-box !important;
   }
 
   .country-flag-svg {

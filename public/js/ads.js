@@ -15,8 +15,8 @@
   const AD_CONFIG = {
     enabled: true,
 
-    // الرابط المباشر للربح الإضافي (يفتح في نافذة جديدة فقط عند ضغط الزائر على زر الراعي)
-    directSmartLink: 'https://www.profitableratecpmnetwork.com/eb1s6shc?key=79594509f41396d2b2075326c6ab797c',
+    // الرابط المباشر للربح الإضافي (يفتح في نافذة جديدة عند التفعيل لفتح الغرف)
+    directSmartLink: 'https://www.profitableratecpmnetwork.com/f4c021nfe?key=8635493de0d07bd3a015caa30635cf8f',
 
     // وحدات البانر المفعّلة (Adsterra / HighRevenueFormat)
     units: {
@@ -191,8 +191,35 @@
     containers.forEach(renderSlot);
   }
 
+  function isSmartlinkUnlocked() {
+    try {
+      if (typeof window !== 'undefined') {
+        const s = window.sessionStorage && window.sessionStorage.getItem('beh_smartlink_unlocked');
+        if (s === '1' || s === 'true') return true;
+        const l = window.localStorage && window.localStorage.getItem('beh_smartlink_unlocked_time');
+        // إذا كان تم التفعيل خلال آخر ساعتين يعتبر مفعلاً
+        if (l && (Date.now() - Number(l) < 2 * 60 * 60 * 1000)) return true;
+      }
+    } catch (_e) { }
+    return false;
+  }
+
+  function unlockSmartlink() {
+    try {
+      if (typeof window !== 'undefined') {
+        if (window.sessionStorage) window.sessionStorage.setItem('beh_smartlink_unlocked', '1');
+        if (window.localStorage) window.localStorage.setItem('beh_smartlink_unlocked_time', String(Date.now()));
+      }
+    } catch (_e) { }
+  }
+
   root.BankElHazAds = {
     config: AD_CONFIG,
-    refresh: refreshAllAds
+    refresh: refreshAllAds,
+    isSmartlinkUnlocked: isSmartlinkUnlocked,
+    unlockSmartlink: unlockSmartlink,
+    getSmartLinkUrl: function () {
+      return AD_CONFIG.directSmartLink;
+    }
   };
 })(typeof window !== 'undefined' ? window : globalThis);

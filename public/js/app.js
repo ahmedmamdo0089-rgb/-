@@ -43,7 +43,8 @@
     openTileModalId: null,
     boardZoomed: false,
     activeLeftTab: 'log',
-    activeMobileView: 'board'
+    activeMobileView: 'board',
+    pendingSmartlinkAction: null
   };
 
   // DOM Elements Cache
@@ -56,6 +57,8 @@
       'landingScreen', 'lobbyScreen', 'gameScreen',
       'inviteBanner', 'inviteBannerTitle', 'inviteBannerSub',
       'playerNameInput', 'avatarPickerGrid', 'createRoomBtn', 'joinRoomCodeInput', 'joinRoomBtn',
+      'smartlinkGateBox', 'smartlinkActionBtn', 'smartlinkUnlockedBadge',
+      'smartlinkModal', 'smartlinkModalConfirmBtn',
       'lobbyRoomCode', 'inviteUrlInput', 'copyInviteBtn', 'whatsappShareBtn',
       'lobbyCountText', 'addBotBtn', 'lobbyPlayersGrid',
       'startingCashSelect', 'freeParkingCheckbox', 'startGameBtn', 'lobbyWaitHint',
@@ -136,6 +139,61 @@
     setTimeout(function () {
       if (t.parentNode) t.parentNode.removeChild(t);
     }, 3600);
+  }
+
+  // ==================== Smartlink Activation & Room Gate ====================
+  function isSmartlinkUnlocked() {
+    if (typeof BankElHazAds !== 'undefined' && typeof BankElHazAds.isSmartlinkUnlocked === 'function') {
+      return BankElHazAds.isSmartlinkUnlocked();
+    }
+    try {
+      return sessionStorage.getItem('beh_smartlink_unlocked') === '1';
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function updateSmartlinkGateUI() {
+    const unlocked = isSmartlinkUnlocked();
+    if (els.smartlinkGateBox) {
+      if (els.smartlinkActionBtn) els.smartlinkActionBtn.classList.toggle('hidden', unlocked);
+      if (els.smartlinkUnlockedBadge) els.smartlinkUnlockedBadge.classList.toggle('hidden', !unlocked);
+      els.smartlinkGateBox.classList.toggle('is-unlocked', unlocked);
+    }
+  }
+
+  function handleSmartlinkUnlockAndProceed(nextAction) {
+    const url = (typeof BankElHazAds !== 'undefined' && BankElHazAds.getSmartLinkUrl && BankElHazAds.getSmartLinkUrl())
+      || 'https://www.profitableratecpmnetwork.com/f4c021nfe?key=8635493de0d07bd3a015caa30635cf8f';
+
+    try {
+      window.open(url, '_blank');
+    } catch (_e) { }
+
+    if (typeof BankElHazAds !== 'undefined' && typeof BankElHazAds.unlockSmartlink === 'function') {
+      BankElHazAds.unlockSmartlink();
+    } else {
+      try {
+        sessionStorage.setItem('beh_smartlink_unlocked', '1');
+      } catch (_e) { }
+    }
+
+    if (els.smartlinkModal) els.smartlinkModal.classList.add('hidden');
+    updateSmartlinkGateUI();
+
+    if (nextAction === 'create') {
+      showToast('🎉 تم تفعيل اللعبة! جاري إنشاء غرفتك...', 'success');
+      setTimeout(function () {
+        if (typeof triggerCreateRoomAction === 'function') triggerCreateRoomAction();
+      }, 250);
+    } else if (nextAction === 'join') {
+      showToast('🎉 تم تفعيل اللعبة! جاري الانضمام للغرفة...', 'success');
+      setTimeout(function () {
+        if (typeof triggerJoinRoomAction === 'function') triggerJoinRoomAction();
+      }, 250);
+    } else {
+      showToast('🎉 تم تفعيل اللعبة بنجاح! متاح إنشاء الغرف والانضمام الآن.', 'success');
+    }
   }
 
   // ==================== Floating Cash Delta Animations (+ Green / - Red) ====================
@@ -1632,27 +1690,29 @@
   // ==================== Mobile Navigation Helpers ====================
   function setMobileView(view) {
     ui.activeMobileView = view;
-    els.mobileBottomNav.querySelectorAll('.mob-nav-btn').forEach(function (b) {
-      b.classList.toggle('active', b.dataset.mobNav === view);
-    });
+    if (els.mobileBottomNav) {
+      els.mobileBottomNav.querySelectorAll('.mob-nav-btn').forEach(function (b) {
+        b.classList.toggle('active', b.dataset.mobNav === view);
+      });
+    }
 
-    els.drawerPlayers.classList.remove('mobile-open');
-    els.drawerSocial.classList.remove('mobile-open');
+    if (els.drawerPlayers) els.drawerPlayers.classList.remove('mobile-open');
+    if (els.drawerSocial) els.drawerSocial.classList.remove('mobile-open');
 
     if (view === 'players') {
-      els.drawerPlayers.classList.add('mobile-open');
+      if (els.drawerPlayers) els.drawerPlayers.classList.add('mobile-open');
       activateRightSubtab('players');
       if (Ads) Ads.refresh(els.drawerPlayers);
     } else if (view === 'assets') {
-      els.drawerPlayers.classList.add('mobile-open');
+      if (els.drawerPlayers) els.drawerPlayers.classList.add('mobile-open');
       activateRightSubtab('assets');
       if (Ads) Ads.refresh(els.drawerPlayers);
     } else if (view === 'social') {
-      els.drawerSocial.classList.add('mobile-open');
+      if (els.drawerSocial) els.drawerSocial.classList.add('mobile-open');
       activateLeftSubtab('chat');
     } else if (view === 'trade') {
       if (ui.state && ui.state.trades && ui.state.trades.some(function (t) { return t.toId === ui.myPlayerId; })) {
-        els.drawerSocial.classList.add('mobile-open');
+        if (els.drawerSocial) els.drawerSocial.classList.add('mobile-open');
       } else {
         openTradeModal();
       }
@@ -1712,15 +1772,17 @@
       renderAvatarPicker();
     });
 
-    // Create Room
-    els.createRoomBtn.addEventListener('click', function () {
+    window.triggerCreateRoomAction = function () {
       const name = els.playerNameInput.value.trim();
       if (name.length < 2) {
         showToast('يرجى كتابة اسمك أولاً (حرفين على الأقل).', 'error');
         els.playerNameInput.focus();
         return;
       }
-      AudioFX.click();
+      try {
+        localStorage.setItem('beh_last_name', name);
+      } catch (_e) { }
+
       const origCreateText = els.createRoomBtn.textContent;
       els.createRoomBtn.disabled = true;
       els.createRoomBtn.textContent = '⏳ جاري إنشاء الغرفة...';
@@ -1742,10 +1804,9 @@
         handleRoomState(res.state);
         showToast('🎉 تم إنشاء الغرفة #' + res.roomCode + '! انسخ الرابط لأصدقائك.', 'success');
       });
-    });
+    };
 
-    // Join Room
-    els.joinRoomBtn.addEventListener('click', function () {
+    window.triggerJoinRoomAction = function () {
       const name = els.playerNameInput.value.trim();
       const code = els.joinRoomCodeInput.value.trim().toUpperCase();
       if (name.length < 2) {
@@ -1758,7 +1819,10 @@
         els.joinRoomCodeInput.focus();
         return;
       }
-      AudioFX.click();
+      try {
+        localStorage.setItem('beh_last_name', name);
+      } catch (_e) { }
+
       const origJoinText = els.joinRoomBtn.textContent;
       els.joinRoomBtn.disabled = true;
       els.joinRoomBtn.textContent = '⏳ اتصال...';
@@ -1783,7 +1847,64 @@
         handleRoomState(res.state);
         showToast('✅ تم الدخول إلى الغرفة #' + res.roomCode + ' بنجاح!', 'success');
       });
+    };
+
+    // Create Room
+    els.createRoomBtn.addEventListener('click', function () {
+      const name = els.playerNameInput.value.trim();
+      if (name.length < 2) {
+        showToast('يرجى كتابة اسمك أولاً (حرفين على الأقل).', 'error');
+        els.playerNameInput.focus();
+        return;
+      }
+      AudioFX.click();
+      if (!isSmartlinkUnlocked()) {
+        ui.pendingSmartlinkAction = 'create';
+        if (els.smartlinkModal) els.smartlinkModal.classList.remove('hidden');
+        return;
+      }
+      window.triggerCreateRoomAction();
     });
+
+    // Join Room
+    els.joinRoomBtn.addEventListener('click', function () {
+      const name = els.playerNameInput.value.trim();
+      const code = els.joinRoomCodeInput.value.trim().toUpperCase();
+      if (name.length < 2) {
+        showToast('يرجى كتابة اسمك أولاً قبل دخول الغرفة.', 'error');
+        els.playerNameInput.focus();
+        return;
+      }
+      if (!code) {
+        showToast('يرجى كتابة كود الغرفة.', 'error');
+        els.joinRoomCodeInput.focus();
+        return;
+      }
+      AudioFX.click();
+      if (!isSmartlinkUnlocked()) {
+        ui.pendingSmartlinkAction = 'join';
+        if (els.smartlinkModal) els.smartlinkModal.classList.remove('hidden');
+        return;
+      }
+      window.triggerJoinRoomAction();
+    });
+
+    // Smartlink Gate Buttons
+    if (els.smartlinkActionBtn) {
+      els.smartlinkActionBtn.addEventListener('click', function () {
+        AudioFX.click();
+        handleSmartlinkUnlockAndProceed();
+      });
+    }
+
+    if (els.smartlinkModalConfirmBtn) {
+      els.smartlinkModalConfirmBtn.addEventListener('click', function () {
+        AudioFX.click();
+        const pending = ui.pendingSmartlinkAction;
+        ui.pendingSmartlinkAction = null;
+        handleSmartlinkUnlockAndProceed(pending);
+      });
+    }
 
     function handleCopyInvite() {
       if (!ui.roomCode) return;
@@ -2046,12 +2167,14 @@
     });
 
     // Mobile Bottom Nav
-    els.mobileBottomNav.addEventListener('click', function (ev) {
-      const btn = ev.target.closest('[data-mob-nav]');
-      if (!btn) return;
-      AudioFX.click();
-      setMobileView(btn.dataset.mobNav);
-    });
+    if (els.mobileBottomNav) {
+      els.mobileBottomNav.addEventListener('click', function (ev) {
+        const btn = ev.target.closest('[data-mob-nav]');
+        if (!btn) return;
+        AudioFX.click();
+        setMobileView(btn.dataset.mobNav);
+      });
+    }
 
     // Trade Modal Submit
     els.openTradeFromAssetsBtn.addEventListener('click', function () { openTradeModal(); });
@@ -2164,6 +2287,7 @@
     renderAvatarPicker();
     buildBoardDOM();
     bindEvents();
+    updateSmartlinkGateUI();
     if (Ads) Ads.refresh();
 
     Network.onConnectionChange(function (info) {
