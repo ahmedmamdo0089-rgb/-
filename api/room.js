@@ -178,6 +178,9 @@ function executeAction(room, playerId, payload) {
     case 'USE_JAIL_CARD': return Engine.useJailCard(room, playerId);
     case 'BUY_PROPERTY': return Engine.buyProperty(room, playerId);
     case 'SKIP_PURCHASE': return Engine.skipPurchase(room, playerId);
+    case 'START_CHALLENGE_VOTE': return Engine.startChallengeVote(room, playerId);
+    case 'SUBMIT_CUSTOM_CHALLENGE': return Engine.submitCustomChallenge(room, playerId, payload.customText);
+    case 'CAST_CHALLENGE_VOTE': return Engine.castChallengeVote(room, playerId, payload.vote);
     case 'BUILD_HOUSE': return Engine.buildHouse(room, playerId, Number(payload.tileId));
     case 'SELL_HOUSE': return Engine.sellHouse(room, playerId, Number(payload.tileId));
     case 'MORTGAGE': return Engine.mortgageProperty(room, playerId, Number(payload.tileId));
@@ -302,7 +305,8 @@ module.exports = async function handler(req, res) {
       const created = Engine.createRoom({
         roomCode: code,
         hostName: body.playerName,
-        avatarId: body.avatarId
+        avatarId: body.avatarId,
+        gameMode: body.gameMode || 'CLASSIC'
       });
       if (!created.ok) return sendJson(res, 400, created);
 

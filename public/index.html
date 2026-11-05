@@ -237,16 +237,27 @@
 
         <div class="landing-actions-grid">
           <div class="action-box create-box">
-            <h3>✨ غرفة جديدة</h3>
-            <p>أنشئ غرفة خاصة واحصل على رابط دعوة فريد لإرساله في جروبات الواتساب أو التليجرام.</p>
+            <div class="action-box-tag classic-tag">الوضع الكلاسيكي</div>
+            <h3>🏛️ غرفة كلاسيكية</h3>
+            <p>قوانين بنك الحظ التقليدية الرسمية مع استثمار المحافظات والعواصم والمقايضات الحرة.</p>
             <button id="createRoomBtn" class="btn btn-gold btn-lg full-width" type="button">
-              إنشاء غرفة جديدة
+              🏛️ إنشاء غرفة كلاسيكية
+            </button>
+          </div>
+
+          <div class="action-box party-box">
+            <div class="action-box-tag party-tag">🔥 وضع السهرات والضحك</div>
+            <h3>🎉 قعدة مع الأصدقاء</h3>
+            <p>نفس القوانين الكلاسيكية، ولكن شراء العواصم الكبرى مشروط بتحديات حقيقية وتصويت حي بين الأصدقاء!</p>
+            <button id="createPartyRoomBtn" class="btn btn-party btn-lg full-width" type="button">
+              🎉 إنشاء قعدة مع الأصدقاء
             </button>
           </div>
 
           <div class="action-box join-box">
+            <div class="action-box-tag join-tag">دخول سريع</div>
             <h3>🚀 لديك كود أو رابط غرفة؟</h3>
-            <p>أدخل كود الغرفة المكون من 6 أحرف للانضمام فوراً مع أصدقائك.</p>
+            <p>أدخل كود الغرفة المكون من 6 أحرف للانضمام فوراً مع أصدقائك في أي من الوضعين.</p>
             <div class="join-inline">
               <input
                 id="joinRoomCodeInput"
@@ -303,7 +314,11 @@
     <div class="lobby-container">
       <div class="invite-showcase">
         <div class="invite-info">
-          <span class="badge-tag">رابط الدعوة المباشر للغرفة #<span id="lobbyRoomCode">------</span></span>
+          <div class="lobby-badge-row">
+            <span class="badge-tag">رابط الدعوة المباشر للغرفة #<span id="lobbyRoomCode">------</span></span>
+            <span id="lobbyModeBadge" class="mode-badge party-mode-badge hidden">🎉 طور: قعدة مع الأصدقاء</span>
+            <span id="lobbyClassicBadge" class="mode-badge classic-mode-badge">🏛️ طور: كلاسيكي</span>
+          </div>
           <h3>ادعُ أصدقاءك للانضمام الآن (2 إلى 6 لاعبين)</h3>
           <p>انسخ الرابط وأرسله في الجروب، وبمجرد ضغطهم عليه سيدخلون إلى هذه الغرفة مباشرةً!</p>
         </div>
@@ -644,6 +659,88 @@
     </div>
   </div>
 
+  <!-- نافذة تحدي شراء العواصم الكبرى (طور قعدة مع الأصدقاء) -->
+  <div id="partyChallengeModal" class="modal-backdrop hidden">
+    <div class="modal-card challenge-modal-card">
+      <div class="challenge-header">
+        <div class="challenge-badge">🎉 قعدة مع الأصدقاء • تحدي الشراء!</div>
+        <div class="challenge-city-display">
+          <div id="challengeCityFlag" class="challenge-city-flag"></div>
+          <div class="challenge-city-info">
+            <h3 id="challengeCityName">العاصمة</h3>
+            <span id="challengeCityPrice" class="challenge-price-pill">$0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="challenge-card-body">
+        <p class="challenge-intro-text">
+          لشراء هذه المدينة الكبرى، يجب على اللاعب <strong id="challengerNameDisplay">اللاعب</strong> تنفيذ التحدي الحقيقي أمام الأصدقاء في الجلسة:
+        </p>
+
+        <!-- بطاقة التحدي المقترح -->
+        <div class="challenge-dare-box" id="challengeDareBox">
+          <div class="dare-icon" id="challengeDareIcon">🎯</div>
+          <div class="dare-content">
+            <h4 id="challengeDareTitle">تحدي الجلسة</h4>
+            <p id="challengeDareDesc">نفّذ التحدي أمام أصدقائك الآن!</p>
+          </div>
+        </div>
+
+        <!-- خيار التحدي المخصص إذا لم يعجبهم التحدي -->
+        <div class="custom-challenge-accordion">
+          <button id="toggleCustomChallengeBtn" class="btn btn-outline btn-xs" type="button">
+            ✏️ لم يعجبكم التحدي؟ اكتبوا تحدياً مخصصاً بالاتفاق بينكم
+          </button>
+          <div id="customChallengeBox" class="custom-challenge-box hidden">
+            <input
+              id="customChallengeInput"
+              class="text-input"
+              type="text"
+              maxlength="120"
+              placeholder="اكتب التحدي المتفق عليه (مثال: نكتة تضحك الجميع أو 15 قفزة)"
+            />
+            <button id="submitCustomChallengeBtn" class="btn btn-gold btn-sm" type="button">
+              اعتماد التحدي المخصص وبدء التصويت
+            </button>
+          </div>
+        </div>
+
+        <!-- مساحة تحكم صاحب الدور (Challenger) -->
+        <div id="challengerControlsArea" class="challenge-actions-area">
+          <button id="startChallengeVoteBtn" class="btn btn-party btn-lg full-width" type="button">
+            🎯 نفّذت التحدي! افتح تصويت الأصدقاء الآن
+          </button>
+        </div>
+
+        <!-- مساحة تصويت باقي اللاعبين (Voters) -->
+        <div id="votersControlsArea" class="challenge-voter-area hidden">
+          <div class="voter-prompt-text">هل قام اللاعب بتنفيذ التحدي كاملاً وبصدق؟</div>
+          <div class="vote-buttons-row">
+            <button id="voteChallengeYesBtn" class="btn btn-emerald btn-lg vote-btn" type="button">
+              ✅ نعم، نفّذ التحدي ببراعة!
+            </button>
+            <button id="voteChallengeNoBtn" class="btn btn-crimson btn-lg vote-btn" type="button">
+              ❌ لا، لم ينفّذ التحدي!
+            </button>
+          </div>
+        </div>
+
+        <!-- شريط التصويت الحي والتأكيد -->
+        <div id="challengeLiveVotingStatus" class="challenge-voting-status hidden">
+          <div class="voting-status-head">
+            <span>🗳️ تصويت الأصدقاء في الجلسة:</span>
+            <span id="challengeVoteCountsText" class="voting-count-pill">0 نعم - 0 لا</span>
+          </div>
+          <div id="challengeVotesList" class="challenge-votes-list"></div>
+          <div class="challenge-status-note">
+            ⚠️ إذا قرر الأصدقاء عدم التنفيذ، سيلغى الشراء ويتخطى دورك فوراً للاعب التالي!
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- نافذة إعلان الفائز والخاسرين بنهاية المباراة -->
   <div id="winnerModal" class="modal-backdrop hidden">
     <div class="modal-card winner-modal-card">
@@ -681,14 +778,14 @@
   <!-- حاوية الإشعارات الفورية -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <!-- تحميل Socket.io (عند تشغيل خادم Node.js) + محرك الغرف السحابية العالمي v5.5 + مدير الإعلانات المفعّل -->
+  <!-- تحميل Socket.io (عند تشغيل خادم Node.js) + محرك الغرف السحابية العالمي v6.0 (Party Edition) + مدير الإعلانات المفعّل -->
   <script src="/socket.io/socket.io.js" onerror="window.__NO_SOCKET_IO__=true"></script>
-  <script src="js/shared/gameData.js?v=5.5"></script>
-  <script src="js/shared/gameEngine.js?v=5.5"></script>
-  <script src="js/audio.js?v=5.5"></script>
-  <script src="js/ads.js?v=5.5"></script>
-  <script src="js/network.js?v=5.5"></script>
-  <script src="js/app.js?v=5.5"></script>
+  <script src="js/shared/gameData.js?v=6.0"></script>
+  <script src="js/shared/gameEngine.js?v=6.0"></script>
+  <script src="js/audio.js?v=6.0"></script>
+  <script src="js/ads.js?v=6.0"></script>
+  <script src="js/network.js?v=6.0"></script>
+  <script src="js/app.js?v=6.0"></script>
 </body>
 </html>
 

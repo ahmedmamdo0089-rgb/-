@@ -114,11 +114,43 @@
     };
   }
 
+  // ==================== مكتبة تحديات طور قعدة مع الأصدقاء (Party Mode Challenges) ====================
+  const PARTY_CHALLENGES = [
+    { id: 'c1', type: 'fitness', title: '10 عدات تمرين ضغط (Push-ups)', desc: 'قم بتنفيذ 10 ضغطات كاملة أمام أصدقائك الآن!' },
+    { id: 'c2', type: 'fitness', title: 'تمرين البلانك 25 ثانية', desc: 'اثبت في وضعية البلانك لمدة 25 ثانية دون أن تلامس ركبتك الأرض!' },
+    { id: 'c3', type: 'fitness', title: '15 قفزة جاك (Jumping Jacks)', desc: 'اقفز 15 مرة وافتح يديك وقدميك بصوت مسموع!' },
+    { id: 'c4', type: 'fitness', title: 'تحدي الوقوف على رجل واحدة', desc: 'قف على قدم واحدة واغمض عينيك لمدة 20 ثانية دون أن تفقد توازنك!' },
+    { id: 'c5', type: 'fitness', title: '15 تمرين قرفصاء (Squats)', desc: 'نفذ 15 قرفصاء سريعة وصحيحة أمام الجلسة!' },
+    { id: 'c6', type: 'comedy', title: 'معلق كروي حماسي', desc: 'قم بالتعليق على مجريات اللعبة بنبرة عصام الشوالي أو فهد العتيبي لمدة 30 ثانية!' },
+    { id: 'c7', type: 'comedy', title: 'مذيع نشرة الأخبار الجاد', desc: 'اقرأ آخر الأحداث في شريط اللعبة بنبرة مذيع أخبار رسمي وجاد جداً دون أن تبتسم!' },
+    { id: 'c8', type: 'comedy', title: 'تحدي الضحك الممنوع', desc: 'ألقِ نكتة أو موقفاً طريفاً؛ إذا ضحكت أنت أولاً أو لم يضحك أحد تخسر التحدي!' },
+    { id: 'c9', type: 'comedy', title: 'العربية الفصحى الإلزامية', desc: 'تحدث باللغة العربية الفصحى الرنانة فقط ودون أي عامية حتى ينتهي دورك بالكامل!' },
+    { id: 'c10', type: 'comedy', title: 'التمثيل الصامت (بدون كلام)', desc: 'قم بتمثيل مهنة أو حيوان بحركات صامتة حتى يخمنه أحد اللاعبين!' },
+    { id: 'c11', type: 'vocal', title: 'مقطع غنائي طربي', desc: 'غنِّ مقطعاً لأغنية مشهورة (طربية أو شعبية) بصوت واضح وبدون أي موسيقى!' },
+    { id: 'c12', type: 'vocal', title: 'إلقاء شعري فخم', desc: 'ألقِ بيتين من الشعر أو مثلاً شعبياً بفخامة مبالغ فيها وبحركات مسرحية!' },
+    { id: 'c13', type: 'vocal', title: 'الراب السريع الخاطف', desc: 'ارتجل 4 جمل على قافية واحدة بسرعة دون توقف أو تردد!' },
+    { id: 'c14', type: 'vocal', title: 'تقليد صوت مشهور', desc: 'قلّد نغمة منبه مزعجة أو صوت شخصية كرتونية معروفة أمام الجميع!' },
+    { id: 'c15', type: 'trivia', title: 'سباق الحروف الخاطف', desc: 'اذكر 5 مدن أو دول تبدأ بحرف يختاره أصدقاؤك في غضون 10 ثوانٍ فقط!' },
+    { id: 'c16', type: 'trivia', title: 'العد التنازلي الصاروخي', desc: 'عد تنازلياً من الرقم 30 إلى الرقم 1 في 8 ثوانٍ دون أي تلعثم أو خطأ!' },
+    { id: 'c17', type: 'trivia', title: 'أكلات شعبية عربية', desc: 'اذكر 6 أكلات شعبية عربية مشهورة في غضون 10 ثوانٍ فقط!' },
+    { id: 'c18', type: 'trivia', title: 'عاصمة على الطاير', desc: 'أجب فوراً عن عاصمة دولة يختارها المضيف أو اللاعب الذي بجانبك خلال 5 ثوانٍ!' },
+    { id: 'c19', type: 'hospitality', title: 'كوب ماء دفعة واحدة', desc: 'اشرب كوباً كاملاً من الماء دفعة واحدة دون إنزاله من فمك!' },
+    { id: 'c20', type: 'hospitality', title: 'واجب الضيافة للأصدقاء', desc: 'قم بصب الماء أو الشاي أو تقديم الضيافة للاعب الجالس على يمينك!' },
+    { id: 'c21', type: 'hospitality', title: 'مديح الخصم الصادق', desc: 'اذكر 3 صفات إيجابية حقيقية في منافسك المباشر في اللعبة بكل إخلاص!' },
+    { id: 'c22', type: 'hospitality', title: 'تمثال التجميد (Freeze)', desc: 'تجمّد مكانك مثل التمثال دون أي رمشة أو حركة لمدة 30 ثانية!' }
+  ];
+
+  function isCapitalOrExpensiveCity(tile) {
+    if (!tile || tile.type !== 'property') return false;
+    return (tile.price >= 240) || Boolean(tile.isCapital);
+  }
+
   function createRoom(opts) {
     const options = opts || {};
     const code = (options.roomCode || generateRoomCode()).toUpperCase();
     const room = {
       code: code,
+      gameMode: options.gameMode || 'CLASSIC',
       status: 'LOBBY',
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -137,6 +169,7 @@
       lastMove: null,
       lastCard: null,
       pendingPurchaseTileId: null,
+      currentChallenge: null,
       pendingDebt: null,
       lastEliminated: null,
       finishReason: null,
@@ -701,7 +734,28 @@
       if (!prop.ownerId) {
         room.pendingPurchaseTileId = tile.id;
         room.turnPhase = 'BUY_DECISION';
-        addLog(room, 'وصل ' + player.name + ' إلى "' + tile.name + '" وهي متاحة للشراء مقابل ' + formatMoney(tile.price) + '.', 'info');
+
+        // في طور "قعدة مع الأصدقاء": اشتراط تحدٍ واقعي لشراء عواصم ومدن الصفوة الكبرى
+        if (room.gameMode === 'PARTY' && isCapitalOrExpensiveCity(tile)) {
+          const ch = PARTY_CHALLENGES[Math.floor(Math.random() * PARTY_CHALLENGES.length)];
+          room.currentChallenge = {
+            id: ch.id,
+            title: ch.title,
+            desc: ch.desc,
+            type: ch.type,
+            tileId: tile.id,
+            challengerId: player.id,
+            status: 'PENDING',
+            passed: false,
+            custom: false,
+            votes: {},
+            startedAt: Date.now()
+          };
+          addLog(room, '🎭 طور القعدة: مطلوب تحدٍ واقعي من ' + player.name + ' لامتلاك "' + tile.name + '" (' + formatMoney(tile.price) + ')! 🎯', 'challenge');
+        } else {
+          room.currentChallenge = null;
+          addLog(room, 'وصل ' + player.name + ' إلى "' + tile.name + '" وهي متاحة للشراء مقابل ' + formatMoney(tile.price) + '.', 'info');
+        }
         return;
       }
 
@@ -1044,6 +1098,42 @@
       return { ok: false, error: 'رصيدك لا يكفي لشراء "' + tile.name + '" (' + formatMoney(tile.price) + '). يمكنك رهن عقار أو بيع منزل أولاً.' };
     }
 
+    // في طور قعدة مع الأصدقاء: فحص التحدي المطلوب للعواصم والمدن الكبرى
+    if (room.gameMode === 'PARTY' && isCapitalOrExpensiveCity(tile)) {
+      if (!room.currentChallenge) {
+        const ch = PARTY_CHALLENGES[Math.floor(Math.random() * PARTY_CHALLENGES.length)];
+        room.currentChallenge = {
+          id: ch.id,
+          title: ch.title,
+          desc: ch.desc,
+          type: ch.type,
+          tileId: tile.id,
+          challengerId: player.id,
+          status: 'VOTING',
+          passed: false,
+          custom: false,
+          votes: {},
+          startedAt: Date.now()
+        };
+        room.turnPhase = 'CHALLENGE_VOTING';
+        addLog(room, '🎯 أطلق ' + player.name + ' تحدي الشراء: "' + ch.title + '"! صوّتوا الآن: هل أتمّه بنجاح؟', 'challenge');
+        room.updatedAt = Date.now();
+        return { ok: true, challengeStarted: true };
+      } else if (room.currentChallenge.status === 'PENDING') {
+        room.currentChallenge.status = 'VOTING';
+        room.turnPhase = 'CHALLENGE_VOTING';
+        addLog(room, '🎯 أطلق ' + player.name + ' تحدي الشراء: "' + room.currentChallenge.title + '"! صوّتوا الآن: هل أتمّه بنجاح؟', 'challenge');
+        room.updatedAt = Date.now();
+        return { ok: true, challengeStarted: true };
+      } else if (room.currentChallenge.status === 'VOTING') {
+        return { ok: false, error: 'جاري تصويت الأصدقاء على التحدي!' };
+      } else if (!room.currentChallenge.passed) {
+        return { ok: false, error: 'لم تنجح في التحدي المطلوب بعد!' };
+      }
+    }
+
+    // إتمام الشراء بعد النجاح في التحدي أو إذا لم يكن مشمولاً بالتحدي
+    room.currentChallenge = null;
     player.cash -= tile.price;
     prop.ownerId = player.id;
     prop.houses = 0;
@@ -1067,10 +1157,13 @@
     if (room.status !== 'PLAYING') return { ok: false, error: 'المباراة ليست نشطة.' };
     const player = getCurrentPlayer(room);
     if (!player || player.id !== actorId) return { ok: false, error: 'ليس دورك الآن.' };
-    if (room.turnPhase !== 'BUY_DECISION') return { ok: false, error: 'لا يوجد قرار شراء معلق.' };
+    if (room.turnPhase !== 'BUY_DECISION' && room.turnPhase !== 'CHALLENGE_VOTING') {
+      return { ok: false, error: 'لا يوجد قرار شراء معلق.' };
+    }
 
     const tile = BOARD_TILES[room.pendingPurchaseTileId];
     room.pendingPurchaseTileId = null;
+    room.currentChallenge = null;
     if (tile) {
       addLog(room, 'تخطى ' + player.name + ' شراء "' + tile.name + '".', 'info');
     }
@@ -1079,6 +1172,100 @@
     finishTurnActionPhase(room, allowExtra);
     room.updatedAt = Date.now();
     return { ok: true };
+  }
+
+  function startChallengeVote(room, actorId) {
+    if (room.status !== 'PLAYING') return { ok: false, error: 'المباراة ليست نشطة.' };
+    const player = getCurrentPlayer(room);
+    if (!player || player.id !== actorId) return { ok: false, error: 'ليس دورك الآن.' };
+    if (!room.currentChallenge || room.pendingPurchaseTileId === null) {
+      return { ok: false, error: 'لا يوجد تحدي متاح.' };
+    }
+    room.currentChallenge.status = 'VOTING';
+    room.turnPhase = 'CHALLENGE_VOTING';
+    addLog(room, '🎯 أطلق ' + player.name + ' تحدي الشراء: "' + room.currentChallenge.title + '"! صوّتوا الآن: هل أتمّه بنجاح؟', 'challenge');
+    room.updatedAt = Date.now();
+    return { ok: true };
+  }
+
+  function submitCustomChallenge(room, actorId, customText) {
+    if (room.status !== 'PLAYING') return { ok: false, error: 'المباراة ليست نشطة.' };
+    const player = getCurrentPlayer(room);
+    if (!player || player.id !== actorId) return { ok: false, error: 'ليس دورك الآن.' };
+    if (!room.currentChallenge || room.pendingPurchaseTileId === null) {
+      return { ok: false, error: 'لا يوجد تحدي شراء متاح.' };
+    }
+    const clean = sanitizeText(customText, 120);
+    if (!clean) return { ok: false, error: 'يرجى كتابة نص التحدي المتفق عليه.' };
+    room.currentChallenge.title = clean;
+    room.currentChallenge.desc = 'تحدٍ مخصص اتفق عليه الأصدقاء في الجلسة!';
+    room.currentChallenge.custom = true;
+    room.currentChallenge.votes = {};
+    room.currentChallenge.status = 'VOTING';
+    room.turnPhase = 'CHALLENGE_VOTING';
+    addLog(room, '✏️ اتفق الأصدقاء على تحدٍ مخصص لـ ' + player.name + ': "' + clean + '"! صوّتوا الآن: هل قام به؟', 'challenge');
+    room.updatedAt = Date.now();
+    return { ok: true };
+  }
+
+  function castChallengeVote(room, voterId, vote) {
+    if (room.status !== 'PLAYING') return { ok: false, error: 'المباراة ليست نشطة.' };
+    if (!room.currentChallenge || room.turnPhase !== 'CHALLENGE_VOTING') {
+      return { ok: false, error: 'لا يوجد تصويت تحدٍ جارٍ حالياً.' };
+    }
+    if (voterId === room.currentChallenge.challengerId) {
+      return { ok: false, error: 'لا يمكنك التصويت على تحديك بنفسك!' };
+    }
+    const voter = getPlayer(room, voterId);
+    if (!voter || voter.bankrupt) return { ok: false, error: 'غير مؤهل للتصويت.' };
+
+    room.currentChallenge.votes[voterId] = Boolean(vote);
+    addLog(room, (vote ? '✅' : '❌') + ' صوّت ' + voter.name + ' بـ (' + (vote ? 'نفّذ التحدي' : 'لم ينفذ') + ').', 'info');
+
+    resolveChallengeIfReady(room);
+    room.updatedAt = Date.now();
+    return { ok: true };
+  }
+
+  function resolveChallengeIfReady(room, forceTimeout) {
+    if (!room.currentChallenge || room.turnPhase !== 'CHALLENGE_VOTING') return;
+
+    const challenger = getPlayer(room, room.currentChallenge.challengerId);
+    const tile = BOARD_TILES[room.currentChallenge.tileId];
+    const activeVoters = getActivePlayers(room).filter(function (p) {
+      return p.id !== room.currentChallenge.challengerId && !p.isBot;
+    });
+
+    const votes = room.currentChallenge.votes || {};
+    const votedIds = Object.keys(votes);
+    const yesCount = votedIds.filter(function (id) { return votes[id] === true; }).length;
+    const noCount = votedIds.filter(function (id) { return votes[id] === false; }).length;
+
+    const allVoted = activeVoters.length === 0 || activeVoters.every(function (p) {
+      return votes[p.id] !== undefined;
+    });
+
+    if (allVoted || forceTimeout) {
+      const passed = (activeVoters.length === 0) ? true : (yesCount >= noCount && yesCount > 0);
+
+      if (passed) {
+        room.currentChallenge.status = 'PASSED';
+        room.currentChallenge.passed = true;
+        room.turnPhase = 'BUY_DECISION';
+        addLog(room, '🏆 نجح ' + (challenger ? challenger.name : '') + ' في التحدي (' + yesCount + ' نعم مقابل ' + noCount + ' لا)! فُتح له خيار الشراء الآن 🎉', 'win');
+      } else {
+        room.currentChallenge.status = 'FAILED';
+        addLog(room, '🚫 فشل ' + (challenger ? challenger.name : '') + ' في إتمام التحدي حسب تصويت الأصدقاء (' + noCount + ' لا)! تم إلغاء الشراء وتمرير الدور للاعب التالي فوراً ⏭️', 'bankrupt');
+        room.pendingPurchaseTileId = null;
+        room.currentChallenge = null;
+        advanceToNextActivePlayer(room);
+        room.turnPhase = 'PRE_ROLL';
+        room.lastRoll = null;
+        room.lastMove = null;
+        const nextPlayer = getCurrentPlayer(room);
+        if (nextPlayer) addLog(room, 'انتقل الدور إلى ' + nextPlayer.name + ' 🎲', 'turn');
+      }
+    }
   }
 
   // Property Building & Mortgaging
@@ -1854,6 +2041,8 @@
       trades: room.trades,
       parkingPot: room.parkingPot,
       winnerId: room.winnerId,
+      gameMode: room.gameMode || 'CLASSIC',
+      currentChallenge: room.currentChallenge || null,
       logs: room.logs,
       chat: room.chat,
       updatedAt: room.updatedAt
@@ -1873,6 +2062,11 @@
     rollDice: rollDice,
     buyProperty: buyProperty,
     skipPurchase: skipPurchase,
+    startChallengeVote: startChallengeVote,
+    submitCustomChallenge: submitCustomChallenge,
+    castChallengeVote: castChallengeVote,
+    resolveChallengeIfReady: resolveChallengeIfReady,
+    PARTY_CHALLENGES: PARTY_CHALLENGES,
     canBuildHouseCheck: canBuildHouseCheck,
     buildHouse: buildHouse,
     canSellHouseCheck: canSellHouseCheck,

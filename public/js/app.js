@@ -78,6 +78,12 @@
       'tradeTheirCash', 'tradeTheirCards', 'tradeTheirProps',
       'tradeNoteInput', 'submitTradeBtn',
       'winnerModal', 'winnerTitle', 'winnerSubtitle', 'winnerStandings', 'winnerExitBtn',
+      'createPartyRoomBtn', 'lobbyModeBadge', 'lobbyClassicBadge',
+      'partyChallengeModal', 'challengeCityFlag', 'challengeCityName', 'challengeCityPrice',
+      'challengerNameDisplay', 'challengeDareBox', 'challengeDareIcon', 'challengeDareTitle', 'challengeDareDesc',
+      'toggleCustomChallengeBtn', 'customChallengeBox', 'customChallengeInput', 'submitCustomChallengeBtn',
+      'challengerControlsArea', 'startChallengeVoteBtn', 'votersControlsArea', 'voteChallengeYesBtn', 'voteChallengeNoBtn',
+      'challengeLiveVotingStatus', 'challengeVoteCountsText', 'challengeVotesList',
       'centerLiveFeed', 'underBoardArea', 'underBoardPlayers',
       'underBoardBankruptBtn', 'underBoardTradesBtn', 'underBoardProperties',
       'underPropsCount', 'underPropsList',
@@ -225,7 +231,12 @@
     if (nextAction === 'create') {
       showToast('🎉 تم تفعيل اللعبة! جاري إنشاء غرفتك...', 'success');
       setTimeout(function () {
-        if (typeof triggerCreateRoomAction === 'function') triggerCreateRoomAction();
+        if (typeof triggerCreateRoomAction === 'function') triggerCreateRoomAction('CLASSIC');
+      }, 250);
+    } else if (nextAction === 'create_party') {
+      showToast('🎉 تم تفعيل اللعبة! جاري إنشاء قعدة الأصدقاء...', 'success');
+      setTimeout(function () {
+        if (typeof triggerCreateRoomAction === 'function') triggerCreateRoomAction('PARTY');
       }, 250);
     } else if (nextAction === 'join') {
       showToast('🎉 تم تفعيل اللعبة! جاري الانضمام للغرفة...', 'success');
@@ -577,6 +588,10 @@
     els.headerRoomCode.textContent = state.code;
     els.inviteUrlInput.value = buildInviteUrl(state.code);
     els.lobbyCountText.textContent = state.players.length + '/' + GAME_CONFIG.MAX_PLAYERS;
+
+    const isParty = state.gameMode === 'PARTY';
+    if (els.lobbyModeBadge) els.lobbyModeBadge.classList.toggle('hidden', !isParty);
+    if (els.lobbyClassicBadge) els.lobbyClassicBadge.classList.toggle('hidden', isParty);
 
     const isHost = state.hostId === ui.myPlayerId;
     els.startingCashSelect.disabled = !isHost;
@@ -1730,6 +1745,110 @@
     }
   }
 
+  // ==================== Party Mode Challenges & Real-time Live Voting ====================
+  function renderPartyChallengeModal(state) {
+    if (!els.partyChallengeModal) return;
+
+    const ch = state.currentChallenge;
+    const shouldShow =
+      state.gameMode === 'PARTY' &&
+      ch &&
+      (ch.status === 'PENDING' || ch.status === 'VOTING') &&
+      (state.turnPhase === 'BUY_DECISION' || state.turnPhase === 'CHALLENGE_VOTING');
+
+    if (!shouldShow) {
+      els.partyChallengeModal.classList.add('hidden');
+      return;
+    }
+
+    els.partyChallengeModal.classList.remove('hidden');
+
+    // Tile display
+    const tile = BOARD_TILES[ch.tileId];
+    if (tile) {
+      const flagSvg = getCountryFlagSvg(tile.group || tile.country);
+      els.challengeCityFlag.innerHTML = flagSvg || (tile.flag ? ('<span>' + tile.flag + '</span>') : '🏛️');
+      els.challengeCityName.textContent = tile.name;
+      els.challengeCityPrice.textContent = '$' + tile.price;
+    }
+
+    // Challenger Name
+    const challenger = state.players.find(function (p) { return p.id === ch.challengerId; });
+    const isChallenger = ui.myPlayerId === ch.challengerId;
+    els.challengerNameDisplay.textContent = challenger ? (challenger.name + (isChallenger ? ' (أنت)' : '')) : 'اللاعب';
+
+    // Dare Content
+    const typeIcons = { fitness: '🏋️', comedy: '🎭', vocal: '🎤', trivia: '🧠', hospitality: '☕' };
+    const typeIcon = (ch.type && typeIcons[ch.type]) || '🎯';
+    els.challengeDareIcon.textContent = typeIcon;
+    els.challengeDareTitle.textContent = ch.title || 'تحدي الشراء';
+    els.challengeDareDesc.textContent = ch.desc || 'قم بتنفيذ التحدي المطلوب أمام الجلسة!';
+
+    // Custom challenge box toggle
+    if (ch.status === 'PENDING' && isChallenger) {
+      if (els.toggleCustomChallengeBtn) els.toggleCustomChallengeBtn.classList.remove('hidden');
+    } else {
+      if (els.toggleCustomChallengeBtn) els.toggleCustomChallengeBtn.classList.add('hidden');
+      if (els.customChallengeBox) els.customChallengeBox.classList.add('hidden');
+    }
+
+    // Controls for Challenger vs Voters
+    if (isChallenger) {
+      els.challengerControlsArea.classList.remove('hidden');
+      if (ch.status === 'PENDING') {
+        els.startChallengeVoteBtn.disabled = false;
+        els.startChallengeVoteBtn.textContent = '🎯 نفّذت التحدي! افتح تصويت الأصدقاء الآن';
+      } else {
+        els.startChallengeVoteBtn.disabled = true;
+        els.startChallengeVoteBtn.textContent = '⏳ جاري تصويت أصدقائك في الجلسة...';
+      }
+      els.votersControlsArea.classList.add('hidden');
+    } else {
+      els.challengerControlsArea.classList.add('hidden');
+      if (ch.status === 'VOTING') {
+        els.votersControlsArea.classList.remove('hidden');
+        const myVote = ch.votes ? ch.votes[ui.myPlayerId] : undefined;
+        if (myVote === true) {
+          els.voteChallengeYesBtn.textContent = '✅ صوّت بـ: نفّذ بنجاح';
+          els.voteChallengeNoBtn.textContent = '❌ تغيير إلى: لم ينفّذ';
+        } else if (myVote === false) {
+          els.voteChallengeNoBtn.textContent = '❌ صوّت بـ: لم ينفّذ';
+          els.voteChallengeYesBtn.textContent = '✅ تغيير إلى: نفّذ بنجاح';
+        } else {
+          els.voteChallengeYesBtn.textContent = '✅ نعم، نفّذ التحدي ببراعة!';
+          els.voteChallengeNoBtn.textContent = '❌ لا، لم ينفّذ التحدي!';
+        }
+      } else {
+        els.votersControlsArea.classList.add('hidden');
+      }
+    }
+
+    // Live Voting Status
+    if (ch.status === 'VOTING') {
+      els.challengeLiveVotingStatus.classList.remove('hidden');
+      const votes = ch.votes || {};
+      const voteKeys = Object.keys(votes);
+      const yesCount = voteKeys.filter(function (k) { return votes[k] === true; }).length;
+      const noCount = voteKeys.filter(function (k) { return votes[k] === false; }).length;
+      els.challengeVoteCountsText.textContent = yesCount + ' نعم - ' + noCount + ' لا';
+
+      const chipsHtml = voteKeys.map(function (vid) {
+        const p = state.players.find(function (pl) { return pl.id === vid; });
+        const pName = p ? p.name : 'لاعب';
+        const isYes = votes[vid] === true;
+        return (
+          '<span class="challenge-vote-chip ' + (isYes ? 'vote-yes' : 'vote-no') + '">' +
+          (isYes ? '✅ ' : '❌ ') + escapeHtml(pName) +
+          '</span>'
+        );
+      }).join('');
+
+      els.challengeVotesList.innerHTML = chipsHtml || '<span style="color:#94a3b8;font-size:0.8rem">بانتظار تصويت أول صديق...</span>';
+    } else {
+      els.challengeLiveVotingStatus.classList.add('hidden');
+    }
+  }
+
   // ==================== Master State Receiver ====================
   function handleRoomState(state) {
     if (!state) return;
@@ -1802,6 +1921,7 @@
     renderActiveTrades(state);
     renderLogsAndChat(state);
     renderWinnerModalIfFinished(state);
+    renderPartyChallengeModal(state);
 
     // Trigger green (+) / red (-) flying cash animations after DOM cash elements are rendered
     trackAndAnimateCashChanges(state);
@@ -1937,7 +2057,8 @@
       renderAvatarPicker();
     });
 
-    window.triggerCreateRoomAction = function () {
+    window.triggerCreateRoomAction = function (mode) {
+      mode = mode || 'CLASSIC';
       const name = els.playerNameInput.value.trim();
       if (name.length < 2) {
         showToast('يرجى كتابة اسمك أولاً (حرفين على الأقل).', 'error');
@@ -1948,15 +2069,17 @@
         localStorage.setItem('beh_last_name', name);
       } catch (_e) { }
 
-      const origCreateText = els.createRoomBtn.textContent;
-      els.createRoomBtn.disabled = true;
-      els.createRoomBtn.textContent = '⏳ جاري إنشاء الغرفة...';
+      const targetBtn = (mode === 'PARTY' && els.createPartyRoomBtn) ? els.createPartyRoomBtn : els.createRoomBtn;
+      const origCreateText = targetBtn.textContent;
+      targetBtn.disabled = true;
+      targetBtn.textContent = '⏳ جاري إنشاء ' + (mode === 'PARTY' ? 'قعدة الأصدقاء...' : 'الغرفة...');
       Network.createRoom({
         playerName: name,
-        avatarId: ui.selectedAvatarId
+        avatarId: ui.selectedAvatarId,
+        gameMode: mode
       }).then(function (res) {
-        els.createRoomBtn.disabled = false;
-        els.createRoomBtn.textContent = origCreateText;
+        targetBtn.disabled = false;
+        targetBtn.textContent = origCreateText;
         if (!res || !res.ok) {
           showToast((res && res.error) || 'تعذر إنشاء الغرفة.', 'error');
           return;
@@ -1967,7 +2090,7 @@
         saveSession(res.roomCode, res.playerId, res.sessionToken);
         window.history.replaceState({}, '', '?room=' + encodeURIComponent(res.roomCode));
         handleRoomState(res.state);
-        showToast('🎉 تم إنشاء الغرفة #' + res.roomCode + '! انسخ الرابط لأصدقائك.', 'success');
+        showToast('🎉 تم إنشاء ' + (mode === 'PARTY' ? 'قعدة الأصدقاء' : 'الغرفة') + ' #' + res.roomCode + '! انسخ الرابط لأصدقائك.', 'success');
       });
     };
 
@@ -2014,7 +2137,7 @@
       });
     };
 
-    // Create Room
+    // Create Room (Classic)
     els.createRoomBtn.addEventListener('click', function () {
       const name = els.playerNameInput.value.trim();
       if (name.length < 2) {
@@ -2028,8 +2151,27 @@
         if (els.smartlinkModal) els.smartlinkModal.classList.remove('hidden');
         return;
       }
-      window.triggerCreateRoomAction();
+      window.triggerCreateRoomAction('CLASSIC');
     });
+
+    // Create Room (Party Mode: قعدة مع الأصدقاء)
+    if (els.createPartyRoomBtn) {
+      els.createPartyRoomBtn.addEventListener('click', function () {
+        const name = els.playerNameInput.value.trim();
+        if (name.length < 2) {
+          showToast('يرجى كتابة اسمك أولاً (حرفين على الأقل).', 'error');
+          els.playerNameInput.focus();
+          return;
+        }
+        AudioFX.click();
+        if (!isSmartlinkUnlocked()) {
+          ui.pendingSmartlinkAction = 'create_party';
+          if (els.smartlinkModal) els.smartlinkModal.classList.remove('hidden');
+          return;
+        }
+        window.triggerCreateRoomAction('PARTY');
+      });
+    }
 
     // Join Room
     els.joinRoomBtn.addEventListener('click', function () {
@@ -2202,6 +2344,75 @@
       els.centerLiveFeed.addEventListener('click', function () {
         AudioFX.click();
         setMobileView('log');
+      });
+    }
+
+    // Party Challenge Handlers
+    if (els.toggleCustomChallengeBtn) {
+      els.toggleCustomChallengeBtn.addEventListener('click', function () {
+        AudioFX.click();
+        if (els.customChallengeBox) {
+          els.customChallengeBox.classList.toggle('hidden');
+          if (!els.customChallengeBox.classList.contains('hidden') && els.customChallengeInput) {
+            els.customChallengeInput.focus();
+          }
+        }
+      });
+    }
+
+    if (els.submitCustomChallengeBtn) {
+      els.submitCustomChallengeBtn.addEventListener('click', function () {
+        const text = els.customChallengeInput.value.trim();
+        if (!text) {
+          showToast('يرجى كتابة نص التحدي المتفق عليه بينكم.', 'error');
+          els.customChallengeInput.focus();
+          return;
+        }
+        AudioFX.click();
+        dispatchGameAction({
+          type: 'SUBMIT_CUSTOM_CHALLENGE',
+          customText: text
+        }).then(function (res) {
+          if (res && res.ok) {
+            showToast('✏️ تم اعتماد التحدي وبدأ التصويت الآن!', 'success');
+            els.customChallengeInput.value = '';
+            if (els.customChallengeBox) els.customChallengeBox.classList.add('hidden');
+          }
+        });
+      });
+    }
+
+    if (els.startChallengeVoteBtn) {
+      els.startChallengeVoteBtn.addEventListener('click', function () {
+        AudioFX.click();
+        dispatchGameAction({ type: 'START_CHALLENGE_VOTE' }).then(function (res) {
+          if (res && res.ok) {
+            showToast('🎯 بدأ تصويت الأصدقاء في الجلسة الآن!', 'success');
+          }
+        });
+      });
+    }
+
+    if (els.voteChallengeYesBtn) {
+      els.voteChallengeYesBtn.addEventListener('click', function () {
+        AudioFX.click();
+        dispatchGameAction({ type: 'CAST_CHALLENGE_VOTE', vote: true }).then(function (res) {
+          if (res && res.ok) {
+            AudioFX.buy();
+            showToast('✅ تم تسجيل صوتك بنجاح!', 'success');
+          }
+        });
+      });
+    }
+
+    if (els.voteChallengeNoBtn) {
+      els.voteChallengeNoBtn.addEventListener('click', function () {
+        AudioFX.click();
+        dispatchGameAction({ type: 'CAST_CHALLENGE_VOTE', vote: false }).then(function (res) {
+          if (res && res.ok) {
+            showToast('❌ تم تسجيل صوتك بعدم التنفيذ.', 'info');
+          }
+        });
       });
     }
 
@@ -2566,11 +2777,11 @@
           : 'انقطع الاتصال...';
       } else if (info.mode === 'mqtt_cloud') {
         els.connectionText.textContent = info.connected
-          ? 'أونلاين عالمي v4.0'
+          ? 'أونلاين عالمي v6.0'
           : 'إعادة الاتصال...';
       } else if (info.mode === 'cloud_api') {
         els.connectionText.textContent = info.connected
-          ? 'أونلاين سحابي v4.0'
+          ? 'أونلاين سحابي v6.0'
           : 'إعادة الاتصال...';
       } else {
         els.connectionText.textContent = 'وضع محلي (بدون إنترنت)';

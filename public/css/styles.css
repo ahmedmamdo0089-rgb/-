@@ -549,7 +549,7 @@ button, input, select {
 
 .landing-actions-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 16px;
   margin-top: 8px;
 }
@@ -718,6 +718,126 @@ button, input, select {
   flex-direction: column;
   justify-content: space-between;
   gap: 12px;
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.action-box:hover {
+  transform: translateY(-2px);
+}
+
+.action-box.create-box {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: linear-gradient(145deg, rgba(14, 25, 60, 0.7), rgba(9, 16, 40, 0.85));
+}
+.action-box.create-box:hover {
+  border-color: var(--gold-bright);
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2);
+}
+
+.action-box.party-box {
+  border: 1.5px solid rgba(168, 85, 247, 0.5);
+  background: linear-gradient(145deg, rgba(35, 18, 65, 0.8), rgba(20, 10, 38, 0.9));
+  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.15);
+}
+.action-box.party-box:hover {
+  border-color: #c084fc;
+  box-shadow: 0 8px 28px rgba(168, 85, 247, 0.35);
+}
+
+.action-box.join-box {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: linear-gradient(145deg, rgba(8, 38, 32, 0.7), rgba(7, 24, 20, 0.85));
+}
+.action-box.join-box:hover {
+  border-color: #34d399;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+}
+
+.action-box-tag {
+  align-self: flex-start;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+.classic-tag {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fde68a;
+}
+.party-tag {
+  background: rgba(168, 85, 247, 0.22);
+  border: 1px solid rgba(168, 85, 247, 0.6);
+  color: #f0abfc;
+  animation: partyTagPulse 2s infinite ease-in-out;
+}
+.join-tag {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #6ee7b7;
+}
+
+@keyframes partyTagPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
+  50% { box-shadow: 0 0 10px 2px rgba(168, 85, 247, 0.6); }
+}
+
+.btn-party {
+  background: linear-gradient(135deg, #a855f7, #7c3aed, #ec4899);
+  background-size: 200% 200%;
+  color: #ffffff;
+  border: 1px solid rgba(240, 171, 252, 0.4);
+  box-shadow: 0 6px 18px rgba(147, 51, 234, 0.45);
+  font-weight: 800;
+  cursor: pointer;
+  animation: gradientShift 4s ease infinite;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-party:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(147, 51, 234, 0.65);
+}
+
+.btn-crimson {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #ffffff;
+  border: 1px solid rgba(254, 202, 202, 0.3);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
+  font-weight: 800;
+  cursor: pointer;
+}
+.btn-crimson:hover {
+  opacity: 0.94;
+  transform: translateY(-1px);
+}
+
+/* شارات وضع الغرفة في شاشة الانتظار */
+.lobby-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.mode-badge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.party-mode-badge {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(236, 72, 153, 0.3));
+  border: 1.5px solid #c084fc;
+  color: #f5d0fe;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.4);
+}
+.classic-mode-badge {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1.5px solid var(--gold);
+  color: #fde68a;
 }
 
 .action-box h3 {
@@ -2734,6 +2854,237 @@ button, input, select {
   color: var(--text-muted);
 }
 
+/* ==================== نافذة تحدي شراء العواصم (طور قعدة مع الأصدقاء) ==================== */
+.challenge-modal-card {
+  max-width: 520px;
+  background: linear-gradient(160deg, #1c1136 0%, #0d081b 100%);
+  border: 2px solid rgba(168, 85, 247, 0.6);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(168, 85, 247, 0.35);
+  padding: 20px;
+  direction: rtl;
+  text-align: center;
+}
+
+.challenge-header {
+  margin-bottom: 14px;
+}
+
+.challenge-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(236, 72, 153, 0.3));
+  border: 1px solid #c084fc;
+  color: #f5d0fe;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.4);
+}
+
+.challenge-city-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 16px;
+}
+
+.challenge-city-flag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.challenge-city-flag .country-flag-svg {
+  width: 38px;
+  height: 25px;
+}
+
+.challenge-city-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.challenge-city-info h3 {
+  font-size: 1.25rem;
+  color: #ffffff;
+  margin: 0;
+}
+
+.challenge-price-pill {
+  background: rgba(74, 222, 128, 0.2);
+  border: 1px solid #4ade80;
+  color: #4ade80;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 0.95rem;
+}
+
+.challenge-intro-text {
+  font-size: 0.92rem;
+  color: #cbd5e1;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.challenge-dare-box {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(79, 70, 229, 0.15));
+  border: 1.5px solid rgba(192, 132, 252, 0.5);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: right;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.dare-icon {
+  font-size: 2.2rem;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dare-content h4 {
+  font-size: 1.08rem;
+  color: #fde68a;
+  margin: 0 0 4px 0;
+  font-weight: 800;
+}
+
+.dare-content p {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.custom-challenge-accordion {
+  margin-bottom: 16px;
+}
+
+.custom-challenge-box {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.challenge-actions-area {
+  margin-top: 10px;
+}
+
+.challenge-voter-area {
+  margin-top: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.voter-prompt-text {
+  font-weight: 800;
+  font-size: 0.96rem;
+  color: #f8fafc;
+  margin-bottom: 12px;
+}
+
+.vote-buttons-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.vote-btn {
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.challenge-voting-status {
+  margin-top: 16px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: right;
+}
+
+.voting-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.voting-count-pill {
+  background: rgba(168, 85, 247, 0.25);
+  border: 1px solid #c084fc;
+  color: #f5d0fe;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.challenge-votes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.challenge-vote-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.challenge-vote-chip.vote-yes {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+}
+.challenge-vote-chip.vote-no {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+
+.challenge-status-note {
+  font-size: 0.76rem;
+  color: #fca5a5;
+  text-align: center;
+  margin-top: 6px;
+  line-height: 1.35;
+}
+
 /* نافذة الفائز */
 .winner-modal-card {
   text-align: center;
@@ -3079,6 +3430,22 @@ button, input, select {
 
   .board-decks-row {
     display: none;
+  }
+
+  .challenge-modal-card {
+    max-width: 95vw;
+    padding: 16px 12px;
+  }
+  .dare-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.8rem;
+  }
+  .dare-content h4 {
+    font-size: 0.98rem;
+  }
+  .dare-content p {
+    font-size: 0.82rem;
   }
 
   .mobile-bottom-nav {

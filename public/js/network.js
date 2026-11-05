@@ -786,7 +786,8 @@
     async function mqttCreateRoom(payload) {
       const created = Engine.createRoom({
         hostName: payload.playerName,
-        avatarId: payload.avatarId
+        avatarId: payload.avatarId,
+        gameMode: payload.gameMode || 'CLASSIC'
       });
       const hostToken = randomToken('mqhost');
       const sessionsMap = {};
@@ -1276,7 +1277,12 @@
       }
 
       if (mode === 'cloud_api') {
-        const res = await cloudPost({ op: 'CREATE', playerName: payload.playerName, avatarId: payload.avatarId }, 8000);
+        const res = await cloudPost({
+          op: 'CREATE',
+          playerName: payload.playerName,
+          avatarId: payload.avatarId,
+          gameMode: payload.gameMode || 'CLASSIC'
+        }, 8000);
         if (res && res.ok) {
           currentRoomCode = res.roomCode;
           currentPlayerId = res.playerId;
@@ -1292,7 +1298,11 @@
       }
 
       activateLocalMode();
-      const res = Engine.createRoom({ hostName: payload.playerName, avatarId: payload.avatarId });
+      const res = Engine.createRoom({
+        hostName: payload.playerName,
+        avatarId: payload.avatarId,
+        gameMode: payload.gameMode || 'CLASSIC'
+      });
       saveLocalRoom(res.room);
       currentRoomCode = res.room.code;
       currentPlayerId = res.player.id;

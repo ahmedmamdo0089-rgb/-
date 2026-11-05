@@ -174,7 +174,8 @@ io.on('connection', (socket) => {
     const res = Engine.createRoom({
       roomCode: code,
       hostName: payload && payload.playerName,
-      avatarId: payload && payload.avatarId
+      avatarId: payload && payload.avatarId,
+      gameMode: (payload && payload.gameMode) || 'CLASSIC'
     });
 
     if (!res.ok) return respond(res);
@@ -311,6 +312,15 @@ io.on('connection', (socket) => {
         break;
       case 'SKIP_PURCHASE':
         result = Engine.skipPurchase(room, playerId);
+        break;
+      case 'START_CHALLENGE_VOTE':
+        result = Engine.startChallengeVote(room, playerId);
+        break;
+      case 'SUBMIT_CUSTOM_CHALLENGE':
+        result = Engine.submitCustomChallenge(room, playerId, payload.customText);
+        break;
+      case 'CAST_CHALLENGE_VOTE':
+        result = Engine.castChallengeVote(room, playerId, payload.vote);
         break;
       case 'BUILD_HOUSE':
         result = Engine.buildHouse(room, playerId, Number(payload.tileId));
