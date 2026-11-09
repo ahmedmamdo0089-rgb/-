@@ -108,6 +108,7 @@
       inJail: false,
       jailTurns: 0,
       jailFreeCards: 0,
+      usedSponsoredJailFree: false,
       bankrupt: false,
       connected: opts.isBot ? true : true,
       isBot: Boolean(opts.isBot)
@@ -220,9 +221,6 @@
         }
       }
     });
-    if (player.bankLoan) {
-      total -= Number(player.bankLoan.due) || 0;
-    }
     return total;
   }
 
@@ -425,6 +423,7 @@
       p.inJail = false;
       p.jailTurns = 0;
       p.jailFreeCards = 0;
+      p.usedSponsoredJailFree = false;
       p.bankrupt = false;
     });
 
@@ -518,45 +517,6 @@
     }
   }
 
-  const LOAN_REPAY_LIMIT_MS = 15 * 60 * 1000; // 15 دقيقة مهلة سداد القرض البنكي
-  const LOAN_JAIL_LIMIT_MS = 10 * 60 * 1000;  // 10 دقائق حبس تأديبي عند عجز الأملاك
-
-  function checkAndAutoRepayBankLoan(room, player) {
-    if (!player || !player.bankLoan || player.bankrupt) return false;
-    const loan = player.bankLoan;
-    const due = Number(loan.due) || ((Number(loan.borrowed) || 300) + 100);
-    const minRequired = due + 100; // e.g. borrowed 300 -> due 400 -> condition cash >= 500
-
-    // في حالة الحبس التأديبي: أي رصيد يغطي قيمة القرض يحرر اللاعب فوراً
-    if (loan.phase === 'LOAN_JAIL') {
-      if (player.cash >= due) {
-        player.cash -= due;
-        player.bankLoan = null;
-        player.inJail = false;
-        player.jailTurns = 0;
-        addLog(
-          room,
-          '🎉 سدد ' + player.name + ' كامل القرض البنكي المستحق (' + formatMoney(due) + ') وتم الإفراج عنه فوراً من السجن التأديبي!',
-          'loan'
-        );
-        return true;
-      }
-      return false;
-    }
-
-    if (player.cash >= minRequired) {
-      player.cash -= due;
-      addLog(
-        room,
-        '💳 تم سداد القرض البنكي لـ ' + player.name + ' تلقائياً بقيمة ' + formatMoney(due) + ' للبنك (المتبقي معه ' + formatMoney(player.cash) + '). تم إبراء الذمة المالية بنجاح! 🎉',
-        'loan'
-      );
-      player.bankLoan = null;
-      return true;
-    }
-    return false;
-  }
-
   function creditPlayerCash(room, player, amount, depth) {
     const step = depth || 0;
     if (!player || amount <= 0) return;
@@ -595,7 +555,6 @@
           room.pendingDebt = null;
         }
         addLog(room, '✅ سدد ' + player.name + ' مديونيته بالكامل وعاد رصيده إلى الموجب (' + formatMoney(player.cash) + ')!', 'buy');
-        checkAndAutoRepayBankLoan(room, player);
       } else if (room.pendingDebt && room.pendingDebt.debtorId === player.id) {
         room.pendingDebt.amount = Math.abs(player.cash);
       }
@@ -603,7 +562,6 @@
     }
 
     player.cash += amount;
-    checkAndAutoRepayBankLoan(room, player);
   }
 
   function chargePlayer(room, debtorId, creditorId, amount, reason, resumePhase, extra) {
@@ -998,9 +956,6 @@
     if (!player || player.id !== actorId) return { ok: false, error: 'ليس دورك الآن.' };
     if (room.turnPhase !== 'PRE_ROLL') return { ok: false, error: 'لا يمكنك دفع الكفالة في هذه المرحلة.' };
     if (!player.inJail) return { ok: false, error: 'أنت لست محتجزاً في السجن.' };
-    if (player.bankLoan && player.bankLoan.phase === 'LOAN_JAIL') {
-      return { ok: false, error: 'أنت محتجز في السجن التأديبي لعجز سداد القرض، ولا يمكنك الخروج إلا بسداد كامل القرض المستحق (' + formatMoney(player.bankLoan.due) + ').' };
-    }
     if (player.cash < GAME_CONFIG.JAIL_BAIL) {
       return { ok: false, error: 'رصيدك لا يكفي لدفع الكفالة (' + formatMoney(GAME_CONFIG.JAIL_BAIL) + ').' };
     }
@@ -1022,9 +977,6 @@
     if (!player || player.id !== actorId) return { ok: false, error: 'ليس دورك الآن.' };
     if (room.turnPhase !== 'PRE_ROLL') return { ok: false, error: 'لا يمكنك استخدام البطاقة الآن.' };
     if (!player.inJail) return { ok: false, error: 'أنت لست في السجن.' };
-    if (player.bankLoan && player.bankLoan.phase === 'LOAN_JAIL') {
-      return { ok: false, error: 'أنت محتجز في السجن التأديبي لعجز سداد القرض، ولا يمكن استخدام بطاقة خروج.' };
-    }
     if (player.jailFreeCards <= 0) return { ok: false, error: 'لا تملك بطاقة خروج من السجن.' };
 
     player.jailFreeCards -= 1;
@@ -1037,249 +989,19 @@
 
   function sponsoredJailFree(room, actorId) {
     if (room.status !== 'PLAYING') return { ok: false, error: 'المباراة ليست نشطة.' };
-    const player = getCurrentPlayer(room);
-    if (!player || player.id !== actorId) return { ok: false, error: 'ليس دورك الآن.' };
-    if (room.turnPhase !== 'PRE_ROLL') return { ok: false, error: 'لا يمكنك طلب العفو في هذه المرحلة.' };
+    const player = getPlayer(room, actorId);
+    if (!player || player.bankrupt) return { ok: false, error: 'اللاعب غير مؤهل.' };
     if (!player.inJail) return { ok: false, error: 'أنت لست محتجزاً في السجن.' };
-    if (player.bankLoan && player.bankLoan.phase === 'LOAN_JAIL') {
-      return { ok: false, error: 'أنت محتجز في السجن التأديبي لعجز سداد القرض، ولا يمكنك طلب عفو حتى سداد القرض.' };
+    if (player.usedSponsoredJailFree) {
+      return { ok: false, error: 'تم استخدام العفو الملكي بالفعل في هذه المباراة (متاح مرة واحدة فقط).' };
     }
 
+    player.usedSponsoredJailFree = true;
     player.inJail = false;
     player.jailTurns = 0;
     addLog(room, '🕊️ حصل ' + player.name + ' على عفو ملكي فوري من السجن برعاية الراعي الرسمي!', 'chance');
     room.updatedAt = Date.now();
     return { ok: true };
-  }
-
-  function takeBankLoan(room, actorId, requestedAmount) {
-    if (room.status !== 'PLAYING') return { ok: false, error: 'المباراة ليست نشطة.' };
-    const player = getPlayer(room, actorId);
-    if (!player || player.bankrupt) return { ok: false, error: 'اللاعب غير مؤهل.' };
-    if (player.bankLoan) {
-      return {
-        ok: false,
-        error: 'لديك قرض بنكي نشط بالفعل بقيمة ' + formatMoney(player.bankLoan.due) + '، يجب سداده أولاً قبل طلب قرض جديد.'
-      };
-    }
-
-    let amount = Math.floor(Number(requestedAmount) || 300);
-    if (amount < 300) amount = 300;
-    if (amount > 700) amount = 700;
-
-    const due = amount + 100;
-    const minBalanceToPay = due + 100;
-    const now = Date.now();
-
-    player.bankLoan = {
-      borrowed: amount,
-      due: due,
-      minBalanceToPay: minBalanceToPay,
-      turnTaken: room.turnNumber,
-      takenAt: now,
-      expiresAt: now + LOAN_REPAY_LIMIT_MS,
-      phase: 'ACTIVE',
-      jailExpiresAt: null
-    };
-
-    creditPlayerCash(room, player, amount);
-
-    addLog(
-      room,
-      '🏦 حصل ' + player.name + ' على قرض بنكي بقيمة ' + formatMoney(amount) + ' (المستحق: ' + formatMoney(due) + '). فترة السداد 15 دقيقة وإلا سيبدأ البيع الجبري للأملاك ثم الحبس التأديبي!',
-      'loan'
-    );
-
-    if (player.cash >= 0) {
-      player.debtCreditorId = null;
-      player.debtReason = null;
-      if (room.pendingDebt && room.pendingDebt.debtorId === actorId) {
-        room.pendingDebt = null;
-      }
-      if (room.turnPhase === 'DEBT_RESOLUTION') {
-        room.turnPhase = 'END_TURN';
-      }
-    } else if (room.pendingDebt && room.pendingDebt.debtorId === actorId) {
-      room.pendingDebt.amount = Math.abs(player.cash);
-    }
-
-    room.updatedAt = Date.now();
-    return {
-      ok: true,
-      amount: amount,
-      due: due,
-      minBalanceToPay: minBalanceToPay,
-      expiresAt: player.bankLoan.expiresAt
-    };
-  }
-
-  function sendPlayerToLoanJail(room, player) {
-    const now = Date.now();
-    const oldPos = player.position;
-    player.position = 10;
-    player.inJail = true;
-    player.jailTurns = 0;
-    player.bankLoan.phase = 'LOAN_JAIL';
-    player.bankLoan.jailExpiresAt = now + LOAN_JAIL_LIMIT_MS;
-    recordMove(room, player.id, [oldPos, 10], { directJump: true, passedGo: false, chain: false });
-
-    const remainingDeficit = player.bankLoan.due - Math.max(0, player.cash);
-    addLog(
-      room,
-      '⚖️ لم تكفِ أملاك ' + player.name + ' لسداد القرض البنكي! تم إيداعه في السجن التأديبي لمدة 10 دقائق كمهلة أخيرة لتجميع المبلغ المتبقي (' + formatMoney(remainingDeficit) + ') وإلا سيُعلن إفلاسه وخسارته تلقائياً!',
-      'jail'
-    );
-  }
-
-  function executeLoanDefaultLiquidation(room, player) {
-    const loan = player.bankLoan;
-    if (!loan || loan.phase !== 'ACTIVE') return;
-
-    addLog(
-      room,
-      '⏰ انتهت مهلة الـ 15 دقيقة لسداد القرض البنكي لـ ' + player.name + '! يبدأ البنك الآن بإجراءات البيع الجبري للأملاك لاستيفاء مبلغ ' + formatMoney(loan.due) + '.',
-      'loan'
-    );
-
-    // 1. Direct cash settlement if player already has enough cash
-    if (player.cash >= loan.due) {
-      player.cash -= loan.due;
-      addLog(room, '💳 استوفى البنك كامل مبلغ القرض (' + formatMoney(loan.due) + ') من رصيد ' + player.name + ' النقدي، وتمت تسوية القرض بنجاح.', 'loan');
-      player.bankLoan = null;
-      return;
-    }
-
-    // 2. Liquidate houses first (half cost each)
-    const houseProps = Object.keys(room.properties).filter(function (tid) {
-      const prop = room.properties[tid];
-      return prop.ownerId === player.id && prop.houses > 0;
-    });
-
-    while (player.cash < loan.due && houseProps.length > 0) {
-      let anySoldInPass = false;
-      for (let i = 0; i < houseProps.length; i++) {
-        const tid = Number(houseProps[i]);
-        const prop = room.properties[tid];
-        if (prop && prop.ownerId === player.id && prop.houses > 0) {
-          const tile = BOARD_TILES[tid];
-          const refund = Math.floor((tile.houseCost || 0) / 2);
-          prop.houses -= 1;
-          player.cash += refund;
-          anySoldInPass = true;
-          addLog(room, '🏛️ باع البنك منزلاً في "' + tile.name + '" المملوكة لـ ' + player.name + ' بقيمة ' + formatMoney(refund) + ' لسداد القرض.', 'loan');
-          if (player.cash >= loan.due) break;
-        }
-      }
-      if (!anySoldInPass || player.cash >= loan.due) break;
-    }
-
-    if (player.cash >= loan.due) {
-      player.cash -= loan.due;
-      addLog(room, '✅ استوفى البنك كامل قيمة القرض (' + formatMoney(loan.due) + ') بعد بيع المنازل، وتم إبراء ذمة ' + player.name + ' المالية!', 'loan');
-      player.bankLoan = null;
-      return;
-    }
-
-    // 3. Repossess and sell properties back to the bank (one by one, until cash >= loan.due)
-    const ownedTileIds = Object.keys(room.properties).filter(function (tid) {
-      const prop = room.properties[tid];
-      return prop.ownerId === player.id;
-    });
-
-    for (let i = 0; i < ownedTileIds.length; i++) {
-      const tid = Number(ownedTileIds[i]);
-      const prop = room.properties[tid];
-      const tile = BOARD_TILES[tid];
-      if (prop && prop.ownerId === player.id && tile) {
-        const val = prop.mortgaged ? Math.floor(tile.price / 2) : tile.price;
-        prop.ownerId = null;
-        prop.houses = 0;
-        prop.mortgaged = false;
-        player.cash += val;
-
-        addLog(room, '🏛️ قام البنك بالحجز وبيع "' + tile.name + '" المملوكة لـ ' + player.name + ' بقيمة ' + formatMoney(val) + ' لتغطية القرض البنكي.', 'loan');
-
-        if (player.cash >= loan.due) {
-          player.cash -= loan.due;
-          addLog(room, '✅ تم استيفاء كامل مستحقات القرض البنكي (' + formatMoney(loan.due) + ') من بيع أملاك ' + player.name + '، وتوقفت المصادرة وتبقّى معه ' + formatMoney(player.cash) + '.', 'loan');
-          player.bankLoan = null;
-          return;
-        }
-      }
-    }
-
-    // 4. If all properties and houses were sold and cash still < loan.due, send to Loan Jail for 10 minutes
-    sendPlayerToLoanJail(room, player);
-  }
-
-  function repayBankLoan(room, actorId) {
-    if (room.status !== 'PLAYING') return { ok: false, error: 'المباراة ليست نشطة.' };
-    const player = getPlayer(room, actorId);
-    if (!player || player.bankrupt) return { ok: false, error: 'اللاعب غير متاح.' };
-    if (!player.bankLoan) return { ok: false, error: 'ليس لديك أي قرض بنكي قائم حالياً.' };
-
-    const due = player.bankLoan.due;
-    if (player.cash < due) {
-      return { ok: false, error: 'رصيدك الحالي (' + formatMoney(player.cash) + ') لا يكفي لسداد القرض المستحق (' + formatMoney(due) + ').' };
-    }
-
-    player.cash -= due;
-    const wasInLoanJail = player.bankLoan.phase === 'LOAN_JAIL';
-    player.bankLoan = null;
-
-    if (wasInLoanJail) {
-      player.inJail = false;
-      player.jailTurns = 0;
-      addLog(room, '🎉 سدد ' + player.name + ' كامل القرض البنكي المستحق (' + formatMoney(due) + ') وتم الإفراج عنه فوراً من السجن التأديبي!', 'loan');
-    } else {
-      addLog(room, '💳 قام ' + player.name + ' بسداد القرض البنكي يدوياً بقيمة ' + formatMoney(due) + ' للبنك وتم إبراء ذمته المالية بالكامل!', 'loan');
-    }
-
-    room.updatedAt = Date.now();
-    return { ok: true, due: due, remainingCash: player.cash };
-  }
-
-  function checkRoomLoanTimers(room) {
-    if (!room || room.status !== 'PLAYING') return false;
-    const now = Date.now();
-    let changed = false;
-
-    for (let i = 0; i < room.players.length; i++) {
-      const p = room.players[i];
-      if (!p || p.bankrupt || !p.bankLoan) continue;
-
-      if (p.bankLoan.phase === 'ACTIVE') {
-        if (checkAndAutoRepayBankLoan(room, p)) {
-          changed = true;
-          continue;
-        }
-        if (now >= p.bankLoan.expiresAt) {
-          executeLoanDefaultLiquidation(room, p);
-          changed = true;
-        }
-      } else if (p.bankLoan.phase === 'LOAN_JAIL') {
-        if (p.cash >= p.bankLoan.due) {
-          const dueAmt = p.bankLoan.due;
-          p.cash -= dueAmt;
-          p.bankLoan = null;
-          p.inJail = false;
-          p.jailTurns = 0;
-          addLog(room, '🎉 سدد ' + p.name + ' كامل القرض البنكي المستحق (' + formatMoney(dueAmt) + ') وتم الإفراج عنه من السجن التأديبي!', 'loan');
-          changed = true;
-          continue;
-        }
-        if (p.bankLoan.jailExpiresAt && now >= p.bankLoan.jailExpiresAt) {
-          addLog(room, '💥 انتهت مهلة الـ 10 دقائق في السجن التأديبي دون سداد القرض لـ ' + p.name + '! تم إعلان إفلاسه تلقائياً وخروجه من المباراة.', 'bankrupt');
-          declareBankruptcy(room, p.id, { loanDefaultLoss: true });
-          changed = true;
-        }
-      }
-    }
-
-    if (changed) {
-      room.updatedAt = now;
-    }
-    return changed;
   }
 
   function rollDice(room, actorId, forcedDice) {
@@ -1305,17 +1027,6 @@
 
     // Handling Jail Roll
     if (player.inJail) {
-      if (player.bankLoan && player.bankLoan.phase === 'LOAN_JAIL') {
-        addLog(
-          room,
-          '⛓️ ' + player.name + ' محتجز في السجن التأديبي لعجز سداد القرض البنكي (' + formatMoney(player.bankLoan.due) + '). لا يمكن الخروج بالنرد حتى سداد القرض أو انقضاء مهلة الـ 10 دقائق.',
-          'jail'
-        );
-        finishTurnActionPhase(room, false);
-        room.updatedAt = Date.now();
-        return { ok: true, inLoanJail: true };
-      }
-
       if (isDoubles) {
         player.inJail = false;
         player.jailTurns = 0;
@@ -1863,7 +1574,6 @@
     debtor.jailFreeCards = 0;
     debtor.bankrupt = true;
     debtor.inJail = false;
-    debtor.bankLoan = null;
 
     if (room.hostId === debtor.id) {
       const nextHost = room.players.find(function (p) {
@@ -1940,8 +1650,6 @@
       return declareBankruptcy(room, player.id, { endOfTurnLoss: true });
     }
 
-    checkRoomLoanTimers(room);
-    checkAndAutoRepayBankLoan(room, player);
     advanceToNextActivePlayer(room);
     room.updatedAt = Date.now();
     return { ok: true };
@@ -2265,12 +1973,6 @@
         mortgageProperty(room, current.id, Number(mortgageable));
         return true;
       }
-      if (!current.bankLoan) {
-        const needed = Math.abs(current.cash);
-        const loanAmt = Math.min(700, Math.max(300, Math.ceil(needed / 100) * 100));
-        takeBankLoan(room, current.id, loanAmt);
-        return true;
-      }
       declareBankruptcy(room, current.id, { endOfTurnLoss: true });
       return true;
     }
@@ -2292,12 +1994,6 @@
         });
         if (mortgageable) {
           mortgageProperty(room, current.id, Number(mortgageable));
-          return true;
-        }
-        if (!current.bankLoan) {
-          const needed = Math.abs(current.cash);
-          const loanAmt = Math.min(700, Math.max(300, Math.ceil(needed / 100) * 100));
-          takeBankLoan(room, current.id, loanAmt);
           return true;
         }
         endTurn(room, current.id, { confirmLoss: true });
@@ -2357,20 +2053,10 @@
           inJail: p.inJail,
           jailTurns: p.jailTurns,
           jailFreeCards: p.jailFreeCards,
+          usedSponsoredJailFree: Boolean(p.usedSponsoredJailFree),
           bankrupt: p.bankrupt,
           connected: p.connected,
-          isBot: p.isBot,
-          bankLoan: p.bankLoan ? {
-            borrowed: p.bankLoan.borrowed,
-            due: p.bankLoan.due,
-            minBalanceToPay: p.bankLoan.minBalanceToPay || (p.bankLoan.due + 100),
-            takenAt: p.bankLoan.takenAt,
-            expiresAt: p.bankLoan.expiresAt,
-            phase: p.bankLoan.phase || 'ACTIVE',
-            jailExpiresAt: p.bankLoan.jailExpiresAt || null,
-            remainingRepayMs: Math.max(0, (p.bankLoan.expiresAt || 0) - Date.now()),
-            remainingJailMs: p.bankLoan.jailExpiresAt ? Math.max(0, p.bankLoan.jailExpiresAt - Date.now()) : 0
-          } : null
+          isBot: p.isBot
         };
       }),
       properties: room.properties,
@@ -2407,9 +2093,6 @@
     payJailBail: payJailBail,
     useJailCard: useJailCard,
     sponsoredJailFree: sponsoredJailFree,
-    takeBankLoan: takeBankLoan,
-    repayBankLoan: repayBankLoan,
-    checkRoomLoanTimers: checkRoomLoanTimers,
     rollDice: rollDice,
     buyProperty: buyProperty,
     skipPurchase: skipPurchase,

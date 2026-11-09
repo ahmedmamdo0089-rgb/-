@@ -353,8 +353,12 @@
       case 'ROLL_DICE': return Engine.rollDice(room, actorId);
       case 'PAY_BAIL': return Engine.payJailBail(room, actorId);
       case 'USE_JAIL_CARD': return Engine.useJailCard(room, actorId);
+      case 'SPONSORED_JAIL_FREE': return Engine.sponsoredJailFree(room, actorId);
       case 'BUY_PROPERTY': return Engine.buyProperty(room, actorId);
       case 'SKIP_PURCHASE': return Engine.skipPurchase(room, actorId);
+      case 'START_CHALLENGE_VOTE': return Engine.startChallengeVote(room, actorId);
+      case 'SUBMIT_CUSTOM_CHALLENGE': return Engine.submitCustomChallenge(room, actorId, actionPayload.customText || actionPayload.text);
+      case 'CAST_CHALLENGE_VOTE': return Engine.castChallengeVote(room, actorId, actionPayload.vote);
       case 'BUILD_HOUSE': return Engine.buildHouse(room, actorId, Number(actionPayload.tileId));
       case 'SELL_HOUSE': return Engine.sellHouse(room, actorId, Number(actionPayload.tileId));
       case 'MORTGAGE': return Engine.mortgageProperty(room, actorId, Number(actionPayload.tileId));

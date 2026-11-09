@@ -310,16 +310,6 @@ io.on('connection', (socket) => {
       case 'SPONSORED_JAIL_FREE':
         result = Engine.sponsoredJailFree(room, playerId);
         break;
-      case 'TAKE_BANK_LOAN':
-        result = Engine.takeBankLoan(room, playerId, Number(payload.amount));
-        break;
-      case 'REPAY_BANK_LOAN':
-        result = Engine.repayBankLoan(room, playerId);
-        break;
-      case 'CHECK_LOAN_STATUS':
-        Engine.checkRoomLoanTimers(room);
-        result = { ok: true };
-        break;
       case 'BUY_PROPERTY':
         result = Engine.buyProperty(room, playerId);
         break;
@@ -411,18 +401,6 @@ io.on('connection', (socket) => {
     }, 3000);
   });
 });
-
-// Periodic check for active game loan timers (every 2 seconds)
-setInterval(() => {
-  for (const [code, room] of rooms.entries()) {
-    if (room && room.status === 'PLAYING') {
-      const changed = Engine.checkRoomLoanTimers(room);
-      if (changed) {
-        broadcastRoom(code);
-      }
-    }
-  }
-}, 2000);
 
 // Periodic cleanup of abandoned rooms (every 10 minutes)
 setInterval(() => {
