@@ -45,7 +45,9 @@
     { id: 'lantern', name: 'مصباح الحكايات', icon: '🪔', color: '#0284c7', eyeTone: '#0369a1', badgeBg: 'linear-gradient(135deg, #0284c7, #38bdf8)' },
     { id: 'dallah', name: 'الدلة العربية', icon: '☕', color: '#b45309', eyeTone: '#78350f', badgeBg: 'linear-gradient(135deg, #b45309, #d97706)' },
     { id: 'dhow', name: 'البوم الشراعي', icon: '⛵', color: '#2563eb', eyeTone: '#1d4ed8', badgeBg: 'linear-gradient(135deg, #2563eb, #60a5fa)' },
-    { id: 'camel', name: 'هجين الصحراء', icon: '🐪', color: '#ca8a04', eyeTone: '#a16207', badgeBg: 'linear-gradient(135deg, #ca8a04, #eab308)' }
+    { id: 'camel', name: 'هجين الصحراء', icon: '🐪', color: '#ca8a04', eyeTone: '#a16207', badgeBg: 'linear-gradient(135deg, #ca8a04, #eab308)' },
+    { id: 'vip_sultan', name: 'سلطان الأندلس', icon: '⚔️👑', color: '#e11d48', eyeTone: '#be123c', badgeBg: 'linear-gradient(135deg, #e11d48, #fb7185)', isVip: true, vipTitle: '👑 لقب ملكي' },
+    { id: 'vip_emperor', name: 'إمبراطور الخليج', icon: '💎🦅', color: '#8b5cf6', eyeTone: '#7c3aed', badgeBg: 'linear-gradient(135deg, #8b5cf6, #c084fc)', isVip: true, vipTitle: '💎 لقب إمبراطوري' }
   ];
 
   /**

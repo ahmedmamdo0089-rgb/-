@@ -510,12 +510,18 @@
           <!-- بطاقات اللاعبين مع الكاش البارز -->
           <div class="under-board-players" id="underBoardPlayers"></div>
 
-          <!-- الأزرار السريعة: إفلاس وصفقات -->
+          <!-- شريط تنبيه ومؤقت القرض البنكي المباشر -->
+          <div id="underBoardLoanTicker" class="under-board-loan-ticker hidden"></div>
+
+          <!-- الأزرار السريعة: إفلاس وقرض وصفقات -->
           <div class="under-board-actions">
-            <button id="underBoardBankruptBtn" class="btn btn-bankrupt" type="button">
+            <button id="underBoardBankruptBtn" class="btn btn-bankrupt" type="button" title="إعلان الإفلاس والانسحاب من المباراة">
               🚩 إعلان الإفلاس
             </button>
-            <button id="underBoardTradesBtn" class="btn btn-richup-trades" type="button">
+            <button id="underBoardBankLoanBtn" class="btn btn-bank-loan" type="button" title="طلب قرض بنكي ($300 - $700) برعاية الراعي">
+              🏦 قرض بنكي
+            </button>
+            <button id="underBoardTradesBtn" class="btn btn-richup-trades" type="button" title="فتح صفقات المقايضة">
               🤝 الصفقات <span class="trades-badge-pill">+ إنشاء</span>
             </button>
           </div>
@@ -741,6 +747,100 @@
     </div>
   </div>
 
+  <!-- نافذة خدمة القروض البنكية للإنقاذ -->
+  <div id="bankLoanModal" class="modal-backdrop hidden">
+    <div class="modal-card bank-loan-modal-card">
+      <div class="modal-header">
+        <h3 id="bankLoanModalTitle">🏦 خدمة القروض البنكية (Bank Loan)</h3>
+        <button class="modal-close" data-close-modal="bankLoanModal" type="button">✕</button>
+      </div>
+      <div class="bank-loan-modal-body">
+        <p class="loan-desc">
+          هل تحتاج إلى سيولة فورية للإنقاذ من الخسارة أو لشراء وتطوير العقارات؟ يمنحك البنك قرضاً من <strong>$300</strong> إلى <strong>$700</strong> برسوم خدمة ثابتة قدرها <strong>$100</strong> فقط، ويتم السداد تلقائياً عندما يصبح معك رصيد كافٍ ويبقى معك $100 كأمان مالي.
+        </p>
+
+        <div class="loan-amount-section">
+          <label class="loan-label" for="loanRangeInput">اختر قيمة القرض المطلوب سحبه:</label>
+          <div class="loan-chips-row" id="loanChipsRow">
+            <button type="button" class="loan-chip active" data-amount="300">$300</button>
+            <button type="button" class="loan-chip" data-amount="400">$400</button>
+            <button type="button" class="loan-chip" data-amount="500">$500</button>
+            <button type="button" class="loan-chip" data-amount="600">$600</button>
+            <button type="button" class="loan-chip" data-amount="700">$700</button>
+          </div>
+          <input type="range" id="loanRangeInput" min="300" max="700" step="50" value="300" class="loan-slider" />
+        </div>
+
+        <div class="loan-summary-box">
+          <div class="loan-summary-row">
+            <span>💰 مبلغ القرض الفوري:</span>
+            <strong id="loanSummaryAmount" class="loan-val-primary">$300</strong>
+          </div>
+          <div class="loan-summary-row">
+            <span>💳 المبلغ الإجمالي المطلوب سداده:</span>
+            <strong id="loanSummaryDue" class="loan-val-danger">$400</strong>
+          </div>
+          <div class="loan-summary-row loan-rule-row">
+            <span>⚡ شرط السداد التلقائي:</span>
+            <strong id="loanSummaryCondition" class="loan-val-gold">يُسحب تلقائياً فور وصول رصيدك إلى $500 أو أكثر</strong>
+          </div>
+        </div>
+
+        <div id="bankLoanWarning" class="loan-warning-msg hidden"></div>
+
+        <!-- الشروط والالتزامات الصريحة قبل القرض -->
+        <div class="loan-terms-card" id="loanTermsCard">
+          <div class="loan-terms-header">
+            <span class="loan-terms-badge">⚠️ إقرار بنكي ملزم</span>
+            <h4 class="loan-terms-title">شروط وأحكام القرض البنكي الصارمة:</h4>
+          </div>
+          <div class="loan-terms-content">
+            <div class="loan-term-item">
+              <span class="term-icon">⏱️</span>
+              <div class="term-text">
+                <strong>مهلة السداد (15 دقيقة فقط):</strong>
+                يُمنح المقترض فترة سماح 15 دقيقة فقط لسداد القرض، كما يُسدد تلقائياً فور توفر رصيد كافٍ يغطي القرض ومصروفاته ($المستحق + 100$).
+              </div>
+            </div>
+            <div class="loan-term-item">
+              <span class="term-icon">🏛️</span>
+              <div class="term-text">
+                <strong>البيع الجبري للأملاك:</strong>
+                إذا انتهت مهلة الـ 15 دقيقة دون سداد، سيقوم البنك تلقائياً بمصادرة وبيع أملاكك وعقاراتك التي تساوي المبلغ المطلوب لاستيفاء القرض.
+              </div>
+            </div>
+            <div class="loan-term-item">
+              <span class="term-icon">⛓️</span>
+              <div class="term-text">
+                <strong>السجن التأديبي (10 دقائق):</strong>
+                إذا لم تكفِ جميع أملاكك لتغطية القرض، يتم ترحيلك وحبسك في السجن لمدة 10 دقائق كاملة كمهلة أخيرة لتجميع المبلغ المتبقي.
+              </div>
+            </div>
+            <div class="loan-term-item">
+              <span class="term-icon">💥</span>
+              <div class="term-text">
+                <strong>الإفلاس التلقائي والخسارة:</strong>
+                إذا انقضت الـ 10 دقائق في السجن دون سداد القرض بالكامل، يُعلن إفلاسك وخسارتك للمباراة تلقائياً وبشكل نهائي!
+              </div>
+            </div>
+          </div>
+          <label class="loan-terms-agree-row" for="loanTermsAgreeCheck">
+            <input type="checkbox" id="loanTermsAgreeCheck" />
+            <span>أقر بعلمي التام وموافقتي على كافة الشروط والالتزامات والمهل الزمنية المذكورة أعلاه.</span>
+          </label>
+        </div>
+
+        <button id="confirmTakeLoanBtn" class="btn btn-party btn-lg full-width smartlink-pulse-btn" type="button" disabled>
+          🏦 استلام القرض الآن برعاية الراعي الرسمي ↗
+        </button>
+
+        <div class="loan-footer-note">
+          🔒 القرض البنكي برعاية الراعي الرسمي. يتم خصم القرض تلقائياً وبأمان عندما يصبح رصيدك كافياً لتفادي أي عجز مفاجئ.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- نافذة إعلان الفائز والخاسرين بنهاية المباراة -->
   <div id="winnerModal" class="modal-backdrop hidden">
     <div class="modal-card winner-modal-card">
@@ -778,14 +878,14 @@
   <!-- حاوية الإشعارات الفورية -->
   <div id="toastContainer" class="toast-container"></div>
 
-  <!-- تحميل Socket.io (عند تشغيل خادم Node.js) + محرك الغرف السحابية العالمي v6.0 (Party Edition) + مدير الإعلانات المفعّل -->
+  <!-- تحميل Socket.io (عند تشغيل خادم Node.js) + محرك الغرف السحابية العالمي v6.5 (Monetization Boost) + مدير الإعلانات المفعّل -->
   <script src="/socket.io/socket.io.js" onerror="window.__NO_SOCKET_IO__=true"></script>
-  <script src="js/shared/gameData.js?v=6.0"></script>
-  <script src="js/shared/gameEngine.js?v=6.0"></script>
-  <script src="js/audio.js?v=6.0"></script>
-  <script src="js/ads.js?v=6.0"></script>
-  <script src="js/network.js?v=6.0"></script>
-  <script src="js/app.js?v=6.0"></script>
+  <script src="js/shared/gameData.js?v=6.5"></script>
+  <script src="js/shared/gameEngine.js?v=6.5"></script>
+  <script src="js/audio.js?v=6.5"></script>
+  <script src="js/ads.js?v=6.5"></script>
+  <script src="js/network.js?v=6.5"></script>
+  <script src="js/app.js?v=6.5"></script>
 </body>
 </html>
 

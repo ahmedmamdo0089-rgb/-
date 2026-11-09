@@ -176,6 +176,10 @@ function executeAction(room, playerId, payload) {
     case 'ROLL_DICE': return Engine.rollDice(room, playerId);
     case 'PAY_BAIL': return Engine.payJailBail(room, playerId);
     case 'USE_JAIL_CARD': return Engine.useJailCard(room, playerId);
+    case 'SPONSORED_JAIL_FREE': return Engine.sponsoredJailFree(room, playerId);
+    case 'TAKE_BANK_LOAN': return Engine.takeBankLoan(room, playerId, Number(payload.amount));
+    case 'REPAY_BANK_LOAN': return Engine.repayBankLoan(room, playerId);
+    case 'CHECK_LOAN_STATUS': Engine.checkRoomLoanTimers(room); return { ok: true };
     case 'BUY_PROPERTY': return Engine.buyProperty(room, playerId);
     case 'SKIP_PURCHASE': return Engine.skipPurchase(room, playerId);
     case 'START_CHALLENGE_VOTE': return Engine.startChallengeVote(room, playerId);
@@ -258,6 +262,9 @@ module.exports = async function handler(req, res) {
     }
 
     refreshPresenceAndBots(room, callerId);
+    if (Engine.checkRoomLoanTimers(room)) {
+      bumpVersion(room);
+    }
 
     const clientVersion = Number(q.v || 0);
     if (clientVersion > 0 && clientVersion === room.version) {

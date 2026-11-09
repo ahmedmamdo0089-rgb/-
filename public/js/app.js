@@ -85,9 +85,12 @@
       'challengerControlsArea', 'startChallengeVoteBtn', 'votersControlsArea', 'voteChallengeYesBtn', 'voteChallengeNoBtn',
       'challengeLiveVotingStatus', 'challengeVoteCountsText', 'challengeVotesList',
       'centerLiveFeed', 'underBoardArea', 'underBoardPlayers',
-      'underBoardBankruptBtn', 'underBoardTradesBtn', 'underBoardProperties',
+      'underBoardBankruptBtn', 'underBoardBankLoanBtn', 'underBoardTradesBtn', 'underBoardProperties',
+      'underBoardLoanTicker', 'loanTermsCard', 'loanTermsAgreeCheck',
       'underPropsCount', 'underPropsList',
       'floatingActionsDock', 'floatingLogBtn', 'floatingChatBtn', 'floatingChatBadge',
+      'bankLoanModal', 'bankLoanModalTitle', 'loanChipsRow', 'loanRangeInput',
+      'loanSummaryAmount', 'loanSummaryDue', 'loanSummaryCondition', 'bankLoanWarning', 'confirmTakeLoanBtn',
       'resumeGameBox', 'resumeBoxRoomCode', 'resumeBoxPlayerName', 'resumeActiveGameBtn', 'dismissResumeGameBtn',
       'toastContainer'
     ];
@@ -120,6 +123,13 @@
       return '-$' + Math.abs(n).toLocaleString('en-US');
     }
     return formatMoney(n);
+  }
+
+  function formatSecondsClock(totalSec) {
+    const s = Math.max(0, Math.floor(totalSec));
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (rem < 10 ? '0' : '') + rem;
   }
 
   function getAvatarPreset(val) {
@@ -468,12 +478,17 @@
 
   // ==================== Avatar Picker ====================
   function renderAvatarPicker() {
+    const isVipUnlocked = typeof BankElHazAds !== 'undefined' && BankElHazAds.isVipUnlocked ? BankElHazAds.isVipUnlocked() : false;
+
     els.avatarPickerGrid.innerHTML = PLAYER_PRESETS.map(function (pr) {
       const selected = pr.id === ui.selectedAvatarId ? 'selected' : '';
+      const isLocked = pr.isVip && !isVipUnlocked;
       return (
-        '<div class="avatar-option ' + selected + '" data-avatar-id="' + pr.id + '">' +
+        '<div class="avatar-option ' + selected + (pr.isVip ? ' is-vip-avatar' : '') + (isLocked ? ' is-locked' : '') + '" data-avatar-id="' + pr.id + '"' + (isLocked ? ' data-vip-locked="true"' : '') + '>' +
+        (pr.isVip ? ('<span class="vip-badge-tag">' + (isLocked ? '🔒 VIP' : '👑 VIP') + '</span>') : '') +
         renderRichupAvatar(pr, 'sm') +
         '<span class="av-name">' + escapeHtml(pr.name) + '</span>' +
+        (isLocked ? '<span class="vip-unlock-hint">افتح مجاناً ↗</span>' : '') +
         '</div>'
       );
     }).join('');
@@ -974,11 +989,12 @@
         els.turnBanner.textContent = '🔒 أنت في السجن (المحاولة ' + (current.jailTurns + 1) + ' من 3)';
         html += '<button class="btn btn-gold" id="hubRollBtn" type="button">🎲 ارمِ النرد لمحاولة الدبل</button>';
         if (current.cash >= GAME_CONFIG.JAIL_BAIL) {
-          html += '<button class="btn btn-emerald btn-sm" id="hubPayBailBtn" type="button">🔓 دفع الكفالة (500 ج.م)</button>';
+          html += '<button class="btn btn-emerald btn-sm" id="hubPayBailBtn" type="button">🔓 دفع الكفالة (500$)</button>';
         }
         if (current.jailFreeCards > 0) {
           html += '<button class="btn btn-outline btn-sm" id="hubUseCardBtn" type="button">🕊️ استخدام بطاقة عفو</button>';
         }
+        html += '<button class="btn btn-party btn-sm" id="hubSponsoredJailBtn" type="button">🕊️ عفو ملكي فوري (مجاناً برعاية الراعي ↗)</button>';
       } else {
         els.turnBanner.textContent = state.doublesCount > 0
           ? '🎯 رمية إضافية بسبب الدبل! ارمِ النرد مرة أخرى'
@@ -1009,7 +1025,26 @@
         'رصيدك الحالي: <strong style="direction:ltr;display:inline-block">' + formatSignedCash(current.cash) + '</strong>' +
         (current.debtReason ? ' (' + escapeHtml(current.debtReason) + ')' : '') +
         '<br/>ارهن محافظة أو بع منزلاً أو قايض الآن لاسترداد ' + formatMoney(shortfall) + ' قبل إنهاء الدور وإلا ستخسر!' +
-        '</div>' +
+        '</div>';
+
+      if (!current.bankLoan) {
+        html += '<button class="btn btn-party btn-sm full-width" id="hubOpenBankLoanBtn" type="button" style="margin-bottom:6px;">🏦 طلب قرض بنكي للإنقاذ ($300 - $700) ↗</button>';
+      } else {
+        const isJail = current.bankLoan.phase === 'LOAN_JAIL';
+        const remSec = isJail
+          ? Math.max(0, Math.floor(((current.bankLoan.jailExpiresAt || Date.now()) - Date.now()) / 1000))
+          : Math.max(0, Math.floor(((current.bankLoan.expiresAt || Date.now()) - Date.now()) / 1000));
+        html += '<div class="loan-status-notice ' + (isJail ? 'jail' : '') + '">' +
+          (isJail ? '🚨 محبوس بالسجن التأديبي لعجز القرض: ' : '⏳ مهلة سداد القرض: ') +
+          '<strong>' + formatSecondsClock(remSec) + '</strong> | المستحق: ' + formatMoney(current.bankLoan.due) +
+          '</div>';
+
+        if (current.cash >= current.bankLoan.due) {
+          html += '<button class="btn btn-emerald btn-sm full-width" id="hubRepayLoanBtn" type="button" style="margin-bottom:6px;">💳 سداد القرض البنكي الآن (' + formatMoney(current.bankLoan.due) + ')</button>';
+        }
+      }
+
+      html +=
         '<button class="btn btn-gold btn-sm" id="hubManagePropsBtn" type="button">🏛️ بيع مبانٍ / رهن محافظات</button>' +
         '<button class="btn btn-emerald btn-sm" id="hubOpenTradeBtn" type="button">🤝 صفقة مقايضة للإنقاذ</button>' +
         '<button class="btn btn-danger btn-sm" id="hubEndTurnBtn" type="button">🏳️ إنهاء الدور (إعلان الخسارة)</button>';
@@ -1039,6 +1074,32 @@
     });
     on('hubUseCardBtn', function () {
       dispatchGameAction({ type: 'USE_JAIL_CARD' });
+    });
+    on('hubSponsoredJailBtn', function () {
+      AudioFX.click();
+      if (typeof BankElHazAds !== 'undefined' && BankElHazAds.triggerRewardedSmartLink) {
+        BankElHazAds.triggerRewardedSmartLink(function () {
+          dispatchGameAction({ type: 'SPONSORED_JAIL_FREE' }).then(function (r) {
+            if (r && r.ok) {
+              AudioFX.win();
+              showToast('🕊️ حصلت على عفو ملكي فوري من السجن!', 'success');
+            }
+          });
+        });
+      }
+    });
+    on('hubOpenBankLoanBtn', function () {
+      AudioFX.click();
+      openBankLoanModal();
+    });
+    on('hubRepayLoanBtn', function () {
+      AudioFX.click();
+      dispatchGameAction({ type: 'REPAY_BANK_LOAN' }).then(function (res) {
+        if (res && res.ok) {
+          AudioFX.win();
+          showToast('🎉 تم سداد كامل القرض البنكي بنجاح وإبراء ذمتك المالية!', 'success');
+        }
+      });
     });
     on('hubBuyBtn', function () {
       if (Date.now() < ui.buyUnlockAt || ui.isAnimatingMove) return;
@@ -1105,7 +1166,16 @@
       if (p.id === ui.myPlayerId) badges.push('<span class="mini-tag">أنت</span>');
       if (isTurn) badges.push('<span class="mini-tag turn">🎯 دوره الآن</span>');
       if (!p.bankrupt && p.cash < 0) badges.push('<span class="mini-tag debt">🚨 مديون بالسالب</span>');
-      if (p.inJail) badges.push('<span class="mini-tag jail">🔒 في السجن</span>');
+      if (!p.bankrupt && p.bankLoan) {
+        const isJail = p.bankLoan.phase === 'LOAN_JAIL';
+        const tagClass = isJail ? 'mini-tag loan-jail' : 'mini-tag loan-timer';
+        const remSec = isJail
+          ? Math.max(0, Math.floor(((p.bankLoan.jailExpiresAt || Date.now()) - Date.now()) / 1000))
+          : Math.max(0, Math.floor(((p.bankLoan.expiresAt || Date.now()) - Date.now()) / 1000));
+        const prefix = isJail ? '⛓️ سجن: ' : '⏳ قرض: ';
+        badges.push('<span class="' + tagClass + '" id="playerLoanTag_' + p.id + '" title="مستحق للبنك: ' + formatMoney(p.bankLoan.due) + '">' + prefix + formatSecondsClock(remSec) + '</span>');
+      }
+      if (p.inJail && (!p.bankLoan || p.bankLoan.phase !== 'LOAN_JAIL')) badges.push('<span class="mini-tag jail">🔒 في السجن</span>');
       if (p.jailFreeCards > 0) badges.push('<span class="mini-tag">🕊️ بطاقة عفو ×' + p.jailFreeCards + '</span>');
       if (p.bankrupt) badges.push('<span class="mini-tag jail">💥 خسر (مفلس)</span>');
       if (!p.connected) badges.push('<span class="mini-tag jail">⚠️ غير متصل</span>');
@@ -1172,7 +1242,12 @@
           (isMe ? ' <span class="me-pill">أنت</span>' : '') +
           '</div>' +
           (isTurn ? '<div class="under-player-status turn">🎯 دوره الآن</div>' : '') +
-          (p.inJail ? '<div class="under-player-status jail">⛓️ في السجن</div>' : '') +
+          (p.inJail && (!p.bankLoan || p.bankLoan.phase !== 'LOAN_JAIL') ? '<div class="under-player-status jail">⛓️ في السجن</div>' : '') +
+          (!p.bankrupt && p.bankLoan ? (
+            p.bankLoan.phase === 'LOAN_JAIL'
+              ? '<div class="under-player-status jail" id="underPlayerLoan_' + p.id + '">🚨 سجن تأديبي: ' + formatSecondsClock(Math.max(0, Math.floor(((p.bankLoan.jailExpiresAt || Date.now()) - Date.now()) / 1000))) + '</div>'
+              : '<div class="under-player-status loan" id="underPlayerLoan_' + p.id + '" style="color:#6ee7b7">⏳ قرض: ' + formatSecondsClock(Math.max(0, Math.floor(((p.bankLoan.expiresAt || Date.now()) - Date.now()) / 1000))) + '</div>'
+          ) : '') +
           '</div>' +
           '</div>' +
           '<div class="' + cashClass + '" id="underPlayerCash_' + p.id + '" style="direction:ltr">' + cashText + '</div>' +
@@ -1922,6 +1997,7 @@
     renderLogsAndChat(state);
     renderWinnerModalIfFinished(state);
     renderPartyChallengeModal(state);
+    updateLoanTimersUi();
 
     // Trigger green (+) / red (-) flying cash animations after DOM cash elements are rendered
     trackAndAnimateCashChanges(state);
@@ -2052,8 +2128,25 @@
     els.avatarPickerGrid.addEventListener('click', function (ev) {
       const card = ev.target.closest('[data-avatar-id]');
       if (!card) return;
+      const avId = card.dataset.avatarId;
+      const isLocked = card.dataset.vipLocked === 'true';
+
+      if (isLocked) {
+        AudioFX.click();
+        const conf = window.confirm('👑 هذه الشخصية الملكية الحصرية متاحة مجاناً برعاية الشريك الرسمي!\n\nاضغط "موافق" لتصفح العرض وفتح الشخصيات والألقاب العربية الملكية فوراً.');
+        if (conf) {
+          BankElHazAds.triggerRewardedSmartLink(function () {
+            BankElHazAds.unlockVipAvatars();
+            ui.selectedAvatarId = avId;
+            renderAvatarPicker();
+            showToast('👑 مبارك! تم فتح الشخصيات العربية الملكية بنجاح.', 'success');
+          });
+        }
+        return;
+      }
+
       AudioFX.click();
-      ui.selectedAvatarId = card.dataset.avatarId;
+      ui.selectedAvatarId = avId;
       renderAvatarPicker();
     });
 
@@ -2255,7 +2348,225 @@
         exitToHome();
       }
     });
-    els.winnerExitBtn.addEventListener('click', exitToHome);
+    els.winnerExitBtn.addEventListener('click', function () {
+      if (typeof BankElHazAds !== 'undefined' && BankElHazAds.triggerPostGamePopunder) {
+        BankElHazAds.triggerPostGamePopunder();
+      }
+      exitToHome();
+    });
+
+    // ==================== خدمة القروض البنكية للإنقاذ ====================
+    let selectedLoanAmount = 300;
+
+    function updateBankLoanModalUi(amount) {
+      selectedLoanAmount = Math.min(700, Math.max(300, Math.floor(Number(amount) || 300)));
+      if (els.loanSummaryAmount) els.loanSummaryAmount.textContent = formatMoney(selectedLoanAmount);
+      const due = selectedLoanAmount + 100;
+      const minRequired = due + 100;
+      if (els.loanSummaryDue) els.loanSummaryDue.textContent = formatMoney(due);
+      if (els.loanSummaryCondition) {
+        els.loanSummaryCondition.textContent = 'يُسحب تلقائياً فور وصول رصيدك إلى ' + formatMoney(minRequired) + ' أو أكثر';
+      }
+      if (els.loanRangeInput) els.loanRangeInput.value = selectedLoanAmount;
+      if (els.loanChipsRow) {
+        const chips = els.loanChipsRow.querySelectorAll('.loan-chip');
+        chips.forEach(function (c) {
+          const val = Number(c.dataset.amount);
+          c.classList.toggle('active', val === selectedLoanAmount);
+        });
+      }
+    }
+
+    function openBankLoanModal() {
+      if (!ui.state) return;
+      const me = ui.state.players ? ui.state.players.find(function (p) { return p.id === ui.myPlayerId; }) : null;
+      if (!me || me.bankrupt) {
+        showToast('اللاعب غير مؤهل لطلب قرض بنكي.', 'error');
+        return;
+      }
+
+      updateBankLoanModalUi(selectedLoanAmount);
+
+      if (me.bankLoan) {
+        if (els.bankLoanWarning) {
+          els.bankLoanWarning.classList.remove('hidden');
+          els.bankLoanWarning.textContent = '⚠️ لديك قرض بنكي نشط بالفعل بمبلغ ' + formatMoney(me.bankLoan.due) + '. سيتم سداده تلقائياً عند وصول رصيدك إلى ' + formatMoney(me.bankLoan.minBalanceToPay || (me.bankLoan.due + 100)) + '. لا يمكنك أخذ قرض جديد حتى يتم سداد القرض الحالي.';
+        }
+        if (els.confirmTakeLoanBtn) {
+          els.confirmTakeLoanBtn.disabled = true;
+          els.confirmTakeLoanBtn.textContent = '💳 عليك قرض نشط قيد السداد';
+        }
+      } else {
+        if (els.bankLoanWarning) {
+          els.bankLoanWarning.classList.add('hidden');
+          els.bankLoanWarning.textContent = '';
+        }
+        if (els.confirmTakeLoanBtn) {
+          els.confirmTakeLoanBtn.disabled = false;
+          els.confirmTakeLoanBtn.textContent = '🏦 استلام القرض الآن برعاية الراعي الرسمي ↗';
+        }
+      }
+
+      openModal('bankLoanModal');
+    }
+
+    if (els.loanTermsAgreeCheck) {
+      els.loanTermsAgreeCheck.addEventListener('change', function () {
+        const me = ui.state && ui.state.players ? ui.state.players.find(function (p) { return p.id === ui.myPlayerId; }) : null;
+        if (me && me.bankLoan) {
+          if (els.confirmTakeLoanBtn) els.confirmTakeLoanBtn.disabled = true;
+          return;
+        }
+        if (els.confirmTakeLoanBtn) {
+          els.confirmTakeLoanBtn.disabled = !els.loanTermsAgreeCheck.checked;
+        }
+      });
+    }
+
+    if (els.loanChipsRow) {
+      els.loanChipsRow.addEventListener('click', function (ev) {
+        const chip = ev.target.closest('.loan-chip');
+        if (chip && chip.dataset.amount) {
+          AudioFX.click();
+          updateBankLoanModalUi(chip.dataset.amount);
+        }
+      });
+    }
+
+    if (els.loanRangeInput) {
+      els.loanRangeInput.addEventListener('input', function () {
+        updateBankLoanModalUi(els.loanRangeInput.value);
+      });
+    }
+
+    if (els.confirmTakeLoanBtn) {
+      els.confirmTakeLoanBtn.addEventListener('click', function () {
+        AudioFX.click();
+        if (!ui.state) return;
+        const me = ui.state.players ? ui.state.players.find(function (p) { return p.id === ui.myPlayerId; }) : null;
+        if (me && me.bankLoan) {
+          showToast('لديك قرض بنكي نشط بالفعل.', 'info');
+          return;
+        }
+
+        if (els.loanTermsAgreeCheck && !els.loanTermsAgreeCheck.checked) {
+          showToast('يرجى الموافقة على شروط والتزامات القرض أولاً للمتابعة.', 'error');
+          return;
+        }
+
+        const amt = selectedLoanAmount;
+        if (typeof BankElHazAds !== 'undefined' && BankElHazAds.triggerRewardedSmartLink) {
+          BankElHazAds.triggerRewardedSmartLink(function () {
+            dispatchGameAction({ type: 'TAKE_BANK_LOAN', amount: amt }).then(function (r) {
+              if (r && r.ok) {
+                AudioFX.buy();
+                closeModal('bankLoanModal');
+                showToast('🏦 مبارك! تم استلام القرض البنكي بقيمة ' + formatMoney(r.amount) + ' بنجاح! مهلة السداد 15 دقيقة قبل تفعيل الحجز.', 'success');
+              }
+            });
+          });
+        }
+      });
+    }
+
+    function updateLoanTimersUi() {
+      if (!ui.state || ui.state.status !== 'PLAYING') {
+        if (els.underBoardLoanTicker) els.underBoardLoanTicker.classList.add('hidden');
+        return;
+      }
+
+      const me = ui.state.players ? ui.state.players.find(function (p) { return p.id === ui.myPlayerId; }) : null;
+      const now = Date.now();
+
+      // Check if any player's loan deadline expired
+      let needsSync = false;
+      ui.state.players.forEach(function (p) {
+        if (!p.bankLoan || p.bankrupt) return;
+        if (p.bankLoan.phase === 'ACTIVE' && p.bankLoan.expiresAt && now >= p.bankLoan.expiresAt) {
+          needsSync = true;
+        } else if (p.bankLoan.phase === 'LOAN_JAIL' && p.bankLoan.jailExpiresAt && now >= p.bankLoan.jailExpiresAt) {
+          needsSync = true;
+        }
+      });
+
+      if (needsSync && !ui._loanSyncInFlight) {
+        ui._loanSyncInFlight = true;
+        dispatchGameAction({ type: 'CHECK_LOAN_STATUS' }).finally(function () {
+          setTimeout(function () { ui._loanSyncInFlight = false; }, 3000);
+        });
+      }
+
+      // Render under-board loan ticker for current user
+      if (els.underBoardLoanTicker) {
+        if (me && me.bankLoan && !me.bankrupt) {
+          els.underBoardLoanTicker.classList.remove('hidden');
+          const loan = me.bankLoan;
+          const canRepay = me.cash >= loan.due;
+
+          if (loan.phase === 'LOAN_JAIL') {
+            const jailRemSec = Math.max(0, Math.floor(((loan.jailExpiresAt || (now + 600000)) - now) / 1000));
+            const deficit = Math.max(0, loan.due - Math.max(0, me.cash));
+            els.underBoardLoanTicker.innerHTML =
+              '<div class="loan-ticker-inner jail">' +
+              '<div>🚨 <strong>محتجز بالسجن التأديبي لعجز القرض</strong> | المهلة المتبقية: <span class="loan-ticker-clock">' + formatSecondsClock(jailRemSec) + '</span> (المطلوب: ' + formatMoney(loan.due) + ' / عجز: ' + formatMoney(deficit) + ')</div>' +
+              '<button class="btn btn-gold btn-sm" id="tickerRepayLoanBtn" type="button" ' + (canRepay ? '' : 'disabled title="رصيدك غير كافٍ لسداد ' + formatMoney(loan.due) + '"') + '>' +
+              '💳 سداد وفك الحبس فوراً' +
+              '</button>' +
+              '</div>';
+          } else {
+            const remSec = Math.max(0, Math.floor(((loan.expiresAt || (now + 900000)) - now) / 1000));
+            els.underBoardLoanTicker.innerHTML =
+              '<div class="loan-ticker-inner active">' +
+              '<div>⏳ <strong>عليك قرض بنكي مستحق: ' + formatMoney(loan.due) + '</strong> | مهلة السداد: <span class="loan-ticker-clock">' + formatSecondsClock(remSec) + '</span> (قبل البيع الجبري للأملاك)</div>' +
+              '<button class="btn btn-emerald btn-sm" id="tickerRepayLoanBtn" type="button" ' + (canRepay ? '' : 'disabled title="رصيدك غير كافٍ لسداد ' + formatMoney(loan.due) + '"') + '>' +
+              '💳 سداد القرض الآن' +
+              '</button>' +
+              '</div>';
+          }
+
+          const repayBtn = document.getElementById('tickerRepayLoanBtn');
+          if (repayBtn) {
+            repayBtn.onclick = function () {
+              AudioFX.click();
+              dispatchGameAction({ type: 'REPAY_BANK_LOAN' }).then(function (res) {
+                if (res && res.ok) {
+                  AudioFX.win();
+                  showToast('🎉 تم سداد كامل القرض البنكي بنجاح وإبراء ذمتك المالية!', 'success');
+                }
+              });
+            };
+          }
+        } else {
+          els.underBoardLoanTicker.classList.add('hidden');
+          els.underBoardLoanTicker.innerHTML = '';
+        }
+      }
+
+      // Update countdowns in player list
+      ui.state.players.forEach(function (p) {
+        if (!p.bankLoan || p.bankrupt) return;
+        const tag = document.getElementById('playerLoanTag_' + p.id);
+        if (tag) {
+          if (p.bankLoan.phase === 'LOAN_JAIL') {
+            const rem = Math.max(0, Math.floor(((p.bankLoan.jailExpiresAt || (now + 600000)) - now) / 1000));
+            tag.textContent = '⛓️ سجن: ' + formatSecondsClock(rem);
+          } else {
+            const rem = Math.max(0, Math.floor(((p.bankLoan.expiresAt || (now + 900000)) - now) / 1000));
+            tag.textContent = '⏳ قرض: ' + formatSecondsClock(rem);
+          }
+        }
+        const underTag = document.getElementById('underPlayerLoan_' + p.id);
+        if (underTag) {
+          if (p.bankLoan.phase === 'LOAN_JAIL') {
+            const rem = Math.max(0, Math.floor(((p.bankLoan.jailExpiresAt || (now + 600000)) - now) / 1000));
+            underTag.textContent = '🚨 سجن تأديبي: ' + formatSecondsClock(rem);
+          } else {
+            const rem = Math.max(0, Math.floor(((p.bankLoan.expiresAt || (now + 900000)) - now) / 1000));
+            underTag.textContent = '⏳ قرض: ' + formatSecondsClock(rem);
+          }
+        }
+      });
+    }
 
     // Lobby Controls
     els.addBotBtn.addEventListener('click', function () {
@@ -2300,12 +2611,26 @@
         if (!ui.state) return;
         const me = ui.state.players.find(function (p) { return p.id === ui.myPlayerId; });
         if (!me || me.bankrupt) return;
-        if (window.confirm('هل أنت متأكد من إعلان إفلاسك والانسحاب من المباراة؟')) {
+        if (window.confirm('هل أنت متأكد من إعلان إفلاسك والانسحاب من المباراة؟ ستنتقل أملاكك للدائن أو للبنك.')) {
           AudioFX.bankrupt();
-          clearSession(ui.roomCode);
-          if (els.resumeGameBox) els.resumeGameBox.classList.add('hidden');
-          dispatchGameAction({ type: 'BANKRUPT', targetId: ui.myPlayerId });
+          dispatchGameAction({ type: 'BANKRUPT' }).then(function (res) {
+            if (res && res.ok) {
+              clearSession(ui.roomCode);
+              if (els.resumeGameBox) els.resumeGameBox.classList.add('hidden');
+              showToast('💥 تم إعلان إفلاسك بنجاح والانسحاب من المباراة.', 'info');
+              exitToHome();
+            } else if (res && res.error) {
+              showToast(res.error, 'error');
+            }
+          });
         }
+      });
+    }
+
+    if (els.underBoardBankLoanBtn) {
+      els.underBoardBankLoanBtn.addEventListener('click', function () {
+        AudioFX.click();
+        openBankLoanModal();
       });
     }
 
@@ -2802,6 +3127,7 @@
     Network.onState(handleRoomState);
     Network.init();
     checkInviteUrlOnLoad();
+    setInterval(updateLoanTimersUi, 1000);
   }
 
   if (document.readyState === 'loading') {

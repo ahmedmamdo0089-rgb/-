@@ -135,7 +135,7 @@
     }
   }
 
-  function renderSlot(container) {
+  function renderSlot(container, force) {
     if (!container) return;
     const slotKey = container.getAttribute('data-ad-slot-key');
     const slotCfg = (slotKey && AD_CONFIG.slots[slotKey]) || null;
@@ -155,7 +155,7 @@
 
     const chosenUnit = pickUnitForSlot(slotCfg);
     const renderedKey = container.getAttribute('data-ad-rendered-unit');
-    if (renderedKey === chosenUnit.key) {
+    if (!force && renderedKey === chosenUnit.key) {
       return;
     }
 
@@ -184,11 +184,32 @@
     }
   }
 
+  // ==================== حلقة التحديث التلقائي الصامت (Silent Ad Refresh) ====================
+  let autoRefreshTimer = null;
+  const AUTO_REFRESH_INTERVAL_MS = 50000; // 50 ثانية
+
+  function startAutoRefreshLoop() {
+    if (autoRefreshTimer || typeof window === 'undefined') return;
+    autoRefreshTimer = setInterval(function () {
+      if (!AD_CONFIG.enabled) return;
+      if (typeof document !== 'undefined' && document.visibilityState && document.visibilityState !== 'visible') {
+        return; // لا تحدّث الإعلانات إذا كان التاب غير نشط توفيراً للموارد
+      }
+      const containers = document.querySelectorAll('[data-ad-slot-key]');
+      containers.forEach(function (c) {
+        if (isContainerVisible(c)) {
+          renderSlot(c, true);
+        }
+      });
+    }, AUTO_REFRESH_INTERVAL_MS);
+  }
+
   function refreshAllAds(scopeEl) {
     if (typeof document === 'undefined') return;
     const rootNode = scopeEl || document;
     const containers = rootNode.querySelectorAll('[data-ad-slot-key]');
-    containers.forEach(renderSlot);
+    containers.forEach(function (c) { renderSlot(c, false); });
+    startAutoRefreshLoop();
   }
 
   function isSmartlinkUnlocked() {
@@ -218,12 +239,68 @@
     } catch (_e) { }
   }
 
+  // فحص وفتح الشخصيات الملكية (VIP Avatars)
+  function isVipUnlocked() {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem('beh_vip_avatars_unlocked') === '1';
+      }
+    } catch (_e) { }
+    return false;
+  }
+
+  function unlockVipAvatars() {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('beh_vip_avatars_unlocked', '1');
+      }
+    } catch (_e) { }
+  }
+
+  // بوب أندر مقيّد بنهاية المباراة لمرة واحدة كل 24 ساعة (Strict Post-Game Popunder)
+  function triggerPostGamePopunder() {
+    try {
+      if (typeof window === 'undefined') return;
+      const last = window.localStorage ? window.localStorage.getItem('beh_last_popunder') : null;
+      const now = Date.now();
+      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+      if (last && (now - Number(last)) < ONE_DAY_MS) {
+        return; // تم عرضه بالفعل خلال الـ 24 ساعة الماضية
+      }
+      if (window.localStorage) {
+        window.localStorage.setItem('beh_last_popunder', String(now));
+      }
+      const url = AD_CONFIG.directSmartLink;
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (_e) { }
+  }
+
+  // تشغيل مكافأة السمارت لينك التفاعلية مع تنفيذ الإجراء الداخلي
+  function triggerRewardedSmartLink(onComplete) {
+    const url = AD_CONFIG.directSmartLink;
+    try {
+      if (url && typeof window !== 'undefined') {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (_e) { }
+    unlockSmartlink();
+    if (typeof onComplete === 'function') {
+      setTimeout(onComplete, 300);
+    }
+  }
+
   root.BankElHazAds = {
     config: AD_CONFIG,
     refresh: refreshAllAds,
     isSmartlinkUnlocked: isSmartlinkUnlocked,
     unlockSmartlink: unlockSmartlink,
     lockSmartlink: lockSmartlink,
+    isVipUnlocked: isVipUnlocked,
+    unlockVipAvatars: unlockVipAvatars,
+    triggerPostGamePopunder: triggerPostGamePopunder,
+    triggerRewardedSmartLink: triggerRewardedSmartLink,
     getSmartLinkUrl: function () {
       return AD_CONFIG.directSmartLink;
     }
